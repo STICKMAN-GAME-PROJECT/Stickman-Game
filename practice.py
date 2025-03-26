@@ -10,18 +10,20 @@ Clock = pygame.time.Clock()
 HEIGHT, WIDTH = 400, 800
 
 x, y = 20, 350
-height_rect, width_rect = 30, 30
 speed = 5
 is_jump = False  # is the character is jumping
 jump_right = 10
 walk_left = False
 walk_right = False
 walk_count = 0
+value = 0
 
+# character_walk = pygame.image.load(os.path.join("Assets", "fighter_walk", "walk1.svg"))
 
-character_walk = pygame.image.load(c.stand2)
-character_walk_right = pygame.transform.scale(character_walk, (70, 100))
-character_walk_left = pygame.transform.flip(character_walk_right, True,  False)
+character_walk = [pygame.image.load(f"Assets/fighter_walk/walk{i}.svg") for i in range(1, 9)]
+
+# character_walk_right = pygame.transform.scale(character_walk, (512, 512))
+# character_walk_left = pygame.transform.flip(character_walk_right, True,  False)
 
 win = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Stickman")
@@ -51,6 +53,9 @@ while (run):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
+
+    if value >= len(character_walk):
+        value = 0
 
     keys = pygame.key.get_pressed()
     # if keys[pygame.K_d]:
@@ -97,10 +102,15 @@ while (run):
     win.fill((150, 10, 0))  # remove this after applying the bg
     # pygame.draw.rect(win, (255, 255, 255), (x, y, width_rect, height_rect))
     # remove the previous rect if the character is set to the window
-    win.blit(character_walk_right, (30, 20))
-    win.blit(character_walk_left, (250, 100))
+
+    ch_walk = character_walk[value]
+    ch_walk = pygame.transform.scale(ch_walk, (512, 512))  
+    win.blit(ch_walk, (0, 0))
+
     pygame.display.update()
     Clock.tick(60)
+
+    value+=1
 
 draw_BG_gameWindow()
 Character_walk()
