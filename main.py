@@ -30,7 +30,7 @@ class PyGame:
         self.value = 0
         self.character_idle = [pygame.image.load(f"Assets/fighter_idle/idle{i}.svg") for i in range(1, 9)]
         self.character_walk = [pygame.image.load(f"Assets/fighter_walk/walk{i}.svg") for i in range(1, 9)]
-        self.character_run = [pygame.image.load(f"Assets/fighter_run/fg_run_{i}.svg") for i in range(1, 9)]
+        self.character_run = [pygame.image.load(f"Assets/fighter_run/run{i}.svg") for i in range(1, 9)]
     def main(self):
 
         run = True
@@ -94,9 +94,7 @@ class PyGame:
                     self.jump_right = 10
 
             win.fill(WHITE)
-            # pygame.draw.rect(win, (0, 0, 25),
-            #                  (self.x, self.y, self.width_rect, self.height_rect))
-            # remove the previous rect if the character is set to the window
+
 
             char_idle = self.character_idle[self.value]
             char_idle = pygame.transform.scale(char_idle, (100, 140))
@@ -108,12 +106,23 @@ class PyGame:
             char_run = pygame.transform.scale(char_run, (100, 140))
 
             if keys[pygame.K_LEFT] == False and keys[pygame.K_RIGHT] == False:
+                if self.walk_left == True:
+                    char_idle = pygame.transform.flip(char_idle, True, False)
                 win.blit(char_idle, (self.x, self.y))
 
             elif keys[pygame.K_RSHIFT]==True:
-                win.blit(char_run, (self.x, self.y))
+                if keys[pygame.K_LEFT]==True:
+                    char_run = pygame.transform.flip(char_run, True, False)
+                    win.blit(char_run, (self.x, self.y))
+                else:
+                    win.blit(char_run, (self.x, self.y))
+
             else:
-                win.blit(char_walk, (self.x, self.y))
+                if keys[pygame.K_LEFT]==True:
+                    char_walk = pygame.transform.flip(char_walk, True, False)
+                    win.blit(char_walk, (self.x, self.y))
+                else:
+                    win.blit(char_walk, (self.x, self.y))
             
 
             self.value += 1
