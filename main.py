@@ -10,7 +10,7 @@ Clock = pygame.time.Clock()
 ''''--------------------------------'''
 
 '''color section'''
-WHITE = (255, 255, 255)
+WHITE = (220, 221, 220)
 '''---------------------------'''
 
 
@@ -28,9 +28,29 @@ class PyGame:
         self.walk_count = 0
 
         self.value = 0
-        self.character_idle = [pygame.image.load(f"Assets/fighter_idle/idle{i}.svg") for i in range(1, 9)]
-        self.character_walk = [pygame.image.load(f"Assets/fighter_walk/walk{i}.svg") for i in range(1, 9)]
-        self.character_run = [pygame.image.load(f"Assets/fighter_run/fg_run_{i}.svg") for i in range(1, 9)]
+        self.character_idle_right = [pygame.image.load(
+            c.stand_Right[i]) for i in range(0, 7)]
+        self.character_walk_right = [pygame.image.load(
+            c.walk[i]) for i in range(0, 7)]
+        self.character_run_right = [pygame.image.load(
+            c.run[i]) for i in range(0, 7)]
+        self.character_walk_left = []
+        self.character_run_left = []
+        self.character_idle_left = []
+
+    def char_config(self):
+        for i in range(7):
+            a = pygame.transform.flip(
+                self.character_walk_right[i], True, False)
+            self.character_walk_left.append(a)
+        for i in range(7):
+            a = pygame.transform.flip(
+                self.character_idle_right[i], True, False)
+            self.character_idle_left.append(a)
+        for i in range(7):
+            a = pygame.transform.flip(self.character_run_right[i], True, False)
+            self.character_run_left.append(a)
+
     def main(self):
 
         run = True
@@ -44,13 +64,17 @@ class PyGame:
                 if event.type == pygame.QUIT:
                     run = False
 
-            if self.value >= self.character_idle.__len__():
+            if self.value >= self.character_idle_right.__len__():
                 self.value = 0
-
-            if self.value >= self.character_walk.__len__():
+            if self.value >= self.character_idle_left.__len__():
                 self.value = 0
-
-            if self.value >= self.character_run.__len__():
+            if self.value >= self.character_walk_right.__len__():
+                self.value = 0
+            if self.value >= self.character_walk_left.__len__():
+                self.value = 0
+            if self.value >= self.character_run_right.__len__():
+                self.value = 0
+            if self.value >= self.character_run_left.__len__():
                 self.value = 0
 
             keys = pygame.key.get_pressed()
@@ -62,26 +86,33 @@ class PyGame:
 
                 else:
                     if keys[pygame.K_RSHIFT] and self.x >= 30:
-                        self.x -= 40
+                        self.x -= 30
                     else:
                         self.walk_left = True
                         self.x -= self.speed
                         self.walk_right = False
 
             if keys[pygame.K_RIGHT]:
-                if self.x == 770:
+                if self.x == 700:
                     pass
                 else:
-                    if keys[pygame.K_RSHIFT] and self.x < 740:
-                        self.x += 40
+                    if keys[pygame.K_RSHIFT] and self.x < 690:
+                        if self.x == 700:
+                            pass
+                        else:
+                            self.x += 30
                     else:
                         self.walk_right = True
                         self.x += self.speed
                     self.walk_left = False
 
-            if self.is_jump != True:
-                if keys[pygame.K_UP]:
-                    self.is_jump = True
+            if self.is_jump == False:
+                if 0 > self.x > 700:
+                    # this will stop from leaving the display resolution
+                    pass
+                else:
+                    if keys[pygame.K_UP]:
+                        self.is_jump = True
             else:
                 if self.jump_right >= -10:
                     neg = 1
@@ -97,24 +128,38 @@ class PyGame:
             # pygame.draw.rect(win, (0, 0, 25),
             #                  (self.x, self.y, self.width_rect, self.height_rect))
             # remove the previous rect if the character is set to the window
+            char_idle_right = self.character_idle_right[self.value]
+            char_idle_right = pygame.transform.scale(
+                char_idle_right, (100, 140))
 
-            char_idle = self.character_idle[self.value]
-            char_idle = pygame.transform.scale(char_idle, (100, 140))
+            char_idle_left = self.character_idle_left[self.value]
+            char_idle_left = pygame.transform.scale(
+                char_idle_left, (100, 140))
 
-            char_walk = self.character_walk[self.value]
-            char_walk = pygame.transform.scale(char_walk, (100, 140))
+            char_walk_right = self.character_walk_right[self.value]
+            char_walk_right = pygame.transform.scale(
+                char_walk_right, (100, 140))
 
-            char_run = self.character_run[self.value]
-            char_run = pygame.transform.scale(char_run, (100, 140))
+            char_walk_left = self.character_walk_left[self.value]
+            char_walk_left = pygame.transform.scale(char_walk_left, (100, 140))
+
+            char_run_right = self.character_run_right[self.value]
+            char_run_right = pygame.transform.scale(char_run_right, (100, 140))
+
+            char_run_left = self.character_run_left[self.value]
+            char_run_left = pygame.transform.scale(char_run_left, (100, 140))
 
             if keys[pygame.K_LEFT] == False and keys[pygame.K_RIGHT] == False:
-                win.blit(char_idle, (self.x, self.y))
+                win.blit(char_idle_left, (self.x, self.y)) if keys[pygame.K_LEFT] else win.blit(
+                    char_idle_right, (self.x, self.y))
 
-            elif keys[pygame.K_RSHIFT]==True:
-                win.blit(char_run, (self.x, self.y))
+            elif keys[pygame.K_RSHIFT] == True:
+                win.blit(char_run_right, (self.x, self.y)) if keys[pygame.K_RIGHT] else win.blit(
+                    char_run_left, (self.x, self.y))
+
             else:
-                win.blit(char_walk, (self.x, self.y))
-            
+                win.blit(char_walk_left, (self.x, self.y)) if keys[pygame.K_LEFT] else win.blit(
+                    char_walk_right, (self.x, self.y))
 
             self.value += 1
             pygame.display.update()
@@ -124,4 +169,5 @@ class PyGame:
 
 if __name__ == "__main__":
     pyg = PyGame()
+    pyg.char_config()
     pyg.main()
