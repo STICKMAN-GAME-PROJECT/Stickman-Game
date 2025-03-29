@@ -28,26 +28,28 @@ class PyGame:
         self.walk_count = 0
 
         self.value = 0
+        # it was missing a frame because i ranged it (0, 7), but it had to be (0, 8)/(8)
         self.character_idle_right = [pygame.image.load(
-            c.stand_Right[i]) for i in range(0, 7)]
+            c.stand_Right[i]) for i in range(8)]
         self.character_walk_right = [pygame.image.load(
-            c.walk[i]) for i in range(0, 7)]
+            c.walk[i]) for i in range(8)]
         self.character_run_right = [pygame.image.load(
-            c.run[i]) for i in range(0, 7)]
+            c.run[i]) for i in range(8)]
         self.character_walk_left = []
         self.character_run_left = []
         self.character_idle_left = []
 
     def char_config(self):
-        for i in range(7):
+        # it was missing a frame because i ranged it (7), but it had to be (8)
+        for i in range(8):
             a = pygame.transform.flip(
                 self.character_walk_right[i], True, False)
             self.character_walk_left.append(a)
-        for i in range(7):
+        for i in range(8):
             a = pygame.transform.flip(
                 self.character_idle_right[i], True, False)
             self.character_idle_left.append(a)
-        for i in range(7):
+        for i in range(8):
             a = pygame.transform.flip(self.character_run_right[i], True, False)
             self.character_run_left.append(a)
 
