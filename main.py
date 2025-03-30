@@ -165,6 +165,7 @@ class PyGame:
             self.value += 1
             pygame.display.update()
             Clock.tick(10)
+            Clock.tick(14) # 14 fps
         pygame.quit()
 
 
