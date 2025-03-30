@@ -56,7 +56,6 @@ class PyGame:
     def main(self):
 
         run = True
-        pygame.time.delay(100)  # fps
 
         win = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Stickman")
