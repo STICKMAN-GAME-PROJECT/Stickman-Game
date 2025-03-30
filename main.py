@@ -17,12 +17,18 @@ WHITE = (220, 221, 220)
 class PyGame:
     def __init__(self):
         pygame.init()
-        self.is_jump = False
         self.HEIGHT, self.WIDTH = 500, 800
         self.x, self.y = 20, 320
+        self.fixed_y = self.y   # Save base position in different variable. will be used for jumping
         self.height_rect, self.width_rect = 30, 30
         self.speed = 10
-        self.jump_right = 10
+
+        # Things needed for jumping
+        self.is_jumping = False  # Set initial jump status to false.
+        self.velocity_y = 0      # initial vertical velocity.
+        self.gravity = 16        # gravity value (setting high for faster animation).
+        self.jump_strength = -80 # how high and strong the jump should be. (affects animation)
+
         self.walk_left = False
         self.walk_right = False
         self.walk_count = 0
@@ -38,6 +44,24 @@ class PyGame:
         self.character_walk_left = []
         self.character_run_left = []
         self.character_idle_left = []
+
+    # Initialize and check condition for jumping.
+    def jump(self):
+        # Check if character is jumping.
+        if not self.is_jumping:
+            self.velocity_y = self.jump_strength
+            self.is_jumping = True
+
+    # Update character position.
+    def update(self):
+        self.velocity_y += self.gravity
+        self.y += self.velocity_y
+
+        # Check if character is hitting the base position
+        if self.y >= self.fixed_y:
+            self.y = self.fixed_y
+            self.velocity_y = 0
+            self.is_jumping = False
 
     def char_config(self):
         # it was missing a frame because i ranged it (7), but it had to be (8)
@@ -107,23 +131,11 @@ class PyGame:
                         self.x += self.speed
                     self.walk_left = False
 
-            if self.is_jump == False:
-                if 0 > self.x > 700:
-                    # this will stop from leaving the display resolution
-                    pass
-                else:
-                    if keys[pygame.K_UP]:
-                        self.is_jump = True
-            else:
-                if self.jump_right >= -10:
-                    neg = 1
-                    if self.jump_right < 0:
-                        neg = -1
-                    self.y -= (self.jump_right**2)*.3 * neg
-                    self.jump_right -= 1
-                else:
-                    self.is_jump = False
-                    self.jump_right = 10
+            # Check for up arrow key.
+            if keys[pygame.K_UP]:
+                # initiate jumping
+                self.jump()
+
 
             win.fill(WHITE)
             # pygame.draw.rect(win, (0, 0, 25),
@@ -163,8 +175,10 @@ class PyGame:
                     char_walk_right, (self.x, self.y))
 
             self.value += 1
+
+            # Update position
+            self.update()
             pygame.display.update()
-            Clock.tick(10)
             Clock.tick(14) # 14 fps
         pygame.quit()
 
