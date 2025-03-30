@@ -35,7 +35,8 @@ class PyGame:
         self.character_run = [pygame.image.load(f"Assets/fighter_run/run{i}.svg") for i in range(1, 9)]
 
         #load roads & backgrounds
-        self.road = pygame.image.load("Assets/roads/wall.png")
+        self.road = pygame.image.load("Assets/roads/road.png")
+        self.wall = pygame.image.load("Assets/roads/wall.png")
         self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
     def main(self):
 
@@ -130,12 +131,24 @@ class PyGame:
                 win.blit(self.buildings[4], (i * building_width + self.scroll - self.camera_x, 0))
 
 
+            # Scrolling wall
+            wall_width = self.wall.get_width()
+            tiles = math.ceil(self.WIDTH / wall_width)
+
+            self.wall = pygame.transform.scale(self.wall, (2000, 200))
+
+            for i in range(tiles):
+                win.blit(self.wall, (i * wall_width + self.scroll - self.camera_x, 260))
+
             # Scrolling road
             road_width = self.road.get_width()
             tiles = math.ceil(self.WIDTH / road_width)
 
+            self.road = pygame.transform.scale(self.road, (2000, 60))
+
             for i in range(tiles):
-                win.blit(self.road, (i * road_width + self.scroll - self.camera_x, 260))
+                win.blit(self.road, (i * road_width + self.scroll - self.camera_x, 440))
+
 
             # Reset scroll to prevent overflow
             if self.scroll > road_width:
@@ -143,11 +156,10 @@ class PyGame:
             elif self.scroll < -road_width:
                 self.scroll = 0
 
-            # Adjust player position relative to camera
-            player_screen_x = 20  # Keep player in the center
 
-            # road = pygame.transform.scale(self.road, (2000, 240))
-            # win.blit(road, (0, 260))
+            # Adjust player position relative to camera
+            player_screen_x = 20 
+
 
             if keys[pygame.K_LEFT] == False and keys[pygame.K_RIGHT] == False:
                 if self.walk_left == True:

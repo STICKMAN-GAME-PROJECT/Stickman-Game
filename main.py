@@ -138,9 +138,8 @@ class PyGame:
 
 
             win.fill(WHITE)
-            # pygame.draw.rect(win, (0, 0, 25),
-            #                  (self.x, self.y, self.width_rect, self.height_rect))
-            # remove the previous rect if the character is set to the window
+
+
             char_idle_right = self.character_idle_right[self.value]
             char_idle_right = pygame.transform.scale(
                 char_idle_right, (100, 140))
