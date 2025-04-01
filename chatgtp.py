@@ -11,7 +11,7 @@ class PyGame:
     def __init__(self):
         pygame.init()
         self.HEIGHT, self.WIDTH = 600, 1000
-        self.x, self.y = 20, 320  # Character's initial position
+        self.x, self.y = 20, 420  # Character's initial position
         self.fixed_y = self.y  # Base position, used for jumping mechanics
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4  # Character's walking speed
@@ -128,6 +128,15 @@ class PyGame:
             for i in range(2):
                 for b in self.buildings:
                     win.blit(b, (i * 500, 0))
+
+
+            # Drawing wall
+            wall = pygame.transform.scale(self.wall, (self.WIDTH, 180))
+            win.blit(wall, (0, 320))
+            
+            # Drawing road
+            road = pygame.transform.scale(self.road, (self.WIDTH, 100))
+            win.blit(road, (0, 500))
 
 
             # Reset animation frame if it exceeds limit
