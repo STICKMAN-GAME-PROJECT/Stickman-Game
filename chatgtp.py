@@ -10,7 +10,7 @@ WHITE = (220, 221, 220)
 class PyGame:
     def __init__(self):
         pygame.init()
-        self.HEIGHT, self.WIDTH = 500, 800
+        self.HEIGHT, self.WIDTH = 600, 1000
         self.x, self.y = 20, 320  # Character's initial position
         self.fixed_y = self.y  # Base position, used for jumping mechanics
         self.height_rect, self.width_rect = 30, 30
@@ -108,7 +108,7 @@ class PyGame:
                 self.walk_left = True
                 self.walk_right = False
 
-            if keys[pygame.K_RIGHT] and self.x < 700:
+            if keys[pygame.K_RIGHT]:
                 self.x += 10 if keys[pygame.K_RSHIFT] else self.speed
                 self.walk_right = True
                 self.walk_left = False
