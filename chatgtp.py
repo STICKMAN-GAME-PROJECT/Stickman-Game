@@ -40,6 +40,11 @@ class PyGame:
         self.character_run_left = []
         self.character_idle_left = []
         
+        # Load environment assets
+        self.road = pygame.image.load("Assets/Terrain/road.png")
+        self.wall = pygame.image.load("Assets/Terrain/wall.png")
+        self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
+
         # Fullscreen tracking
         self.fullscreen = False
     
@@ -118,6 +123,12 @@ class PyGame:
 
             # Drawing background
             win.fill(WHITE)
+
+            #Drawing background buildings
+            for i in range(2):
+                for b in self.buildings:
+                    win.blit(b, (i * 500, 0))
+
 
             # Reset animation frame if it exceeds limit
             if self.value >= 8:
