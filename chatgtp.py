@@ -10,17 +10,17 @@ WHITE = (220, 221, 220)
 class PyGame:
     def __init__(self):
         pygame.init()
-        self.HEIGHT, self.WIDTH = 500, 1200
+        self.HEIGHT, self.WIDTH = 500, 800
         self.x, self.y = 20, 320  # Character's initial position
         self.fixed_y = self.y  # Base position, used for jumping mechanics
         self.height_rect, self.width_rect = 30, 30
-        self.speed = 10  # Character's walking speed
+        self.speed = 4  # Character's walking speed
 
         # Variables for jumping mechanics
         self.is_jumping = False  # Keeps track of whether the character is in the air
         self.velocity_y = 0  # Vertical speed
-        self.gravity = 16  # Gravity value (higher for faster falling)
-        self.jump_strength = -80  # Determines how high the character jumps
+        self.gravity = 8  # Gravity value (higher for faster falling)
+        self.jump_strength = -40  # Determines how high the character jumps
 
         # Movement tracking
         self.walk_left = False
@@ -29,7 +29,7 @@ class PyGame:
 
         # Animation handling
         self.value = 0  # Current animation frame
-        self.animation_speed = {"idle": 0.8, "walk": 0.86, "run": 0.92}  # Different speeds for animations
+        self.animation_speed = {"idle": 0.15, "walk": 0.15, "run": 0.2}  # Different speeds for animations
         self.current_speed = self.animation_speed["idle"]  # Default animation speed
         
         # Load character sprite animations
@@ -39,6 +39,17 @@ class PyGame:
         self.character_walk_left = []
         self.character_run_left = []
         self.character_idle_left = []
+        
+        # Fullscreen tracking
+        self.fullscreen = False
+    
+    def toggle_fullscreen(self):
+        """Toggles fullscreen mode and adjusts resolution."""
+        self.fullscreen = not self.fullscreen
+        if self.fullscreen:
+            pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        else:
+            pygame.display.set_mode((self.WIDTH, self.HEIGHT))
 
     def jump(self):
         """Handles the jumping mechanics."""
@@ -50,6 +61,7 @@ class PyGame:
         """Updates the character's vertical position based on gravity."""
         self.velocity_y += self.gravity
         self.y += self.velocity_y
+
 
         # Prevent falling below ground level
         if self.y >= self.fixed_y:
@@ -70,15 +82,12 @@ class PyGame:
         win = pygame.display.set_mode((self.WIDTH, self.HEIGHT))  # Create game window
         pygame.display.set_caption("Stickman")
 
-
         while run:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:  # Allow quitting the game
                     run = False
-
-             # Toggle fullscreen mode when F11 is pressed
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                pygame.display.toggle_fullscreen()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                    self.toggle_fullscreen()
 
             keys = pygame.key.get_pressed()
 
@@ -92,12 +101,12 @@ class PyGame:
 
             # Character movement logic
             if keys[pygame.K_LEFT] and self.x > 0:
-                self.x -= 26 if keys[pygame.K_RSHIFT] else self.speed
+                self.x -= 10 if keys[pygame.K_RSHIFT] else self.speed
                 self.walk_left = True
                 self.walk_right = False
 
             if keys[pygame.K_RIGHT] and self.x < 700:
-                self.x += 26 if keys[pygame.K_RSHIFT] else self.speed
+                self.x += 10 if keys[pygame.K_RSHIFT] else self.speed
                 self.walk_right = True
                 self.walk_left = False
 
@@ -134,7 +143,7 @@ class PyGame:
 
             self.update()  # Update character's position
             pygame.display.update()  # Refresh display
-            Clock.tick(14)  # Control frame rate
+            Clock.tick(60)  # Control frame rate
 
         pygame.quit()
 
