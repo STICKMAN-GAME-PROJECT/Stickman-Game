@@ -19,8 +19,8 @@ class PyGame:
         # Variables for jumping mechanics
         self.is_jumping = False  # Keeps track of whether the character is in the air
         self.velocity_y = 0  # Vertical speed
-        self.gravity = 8  # Gravity value (higher for faster falling)
-        self.jump_strength = -40  # Determines how high the character jumps
+        self.gravity = 0.5  # Gravity value (slower fall)
+        self.jump_strength = -12  # Jump strength (faster jump)
 
         # Movement tracking
         self.walk_left = False
@@ -54,16 +54,19 @@ class PyGame:
     def jump(self):
         """Handles the jumping mechanics."""
         if not self.is_jumping:  # Only jump if the character is on the ground
-            self.velocity_y = self.jump_strength
+            self.velocity_y = self.jump_strength  # Apply jump strength
             self.is_jumping = True
 
-    def update(self):
-        """Updates the character's vertical position based on gravity."""
-        self.velocity_y += self.gravity
-        self.y += self.velocity_y
+    def update(self, dt):
+        """Updates the character's vertical position based on gravity and time elapsed."""
+        if self.is_jumping:
+            # Gravity is applied to slow down the jump (falling phase)
+            self.velocity_y += self.gravity  # Gravity pulls the character down
 
+            # Apply gravity to vertical velocity (acceleration over time)
+            self.y += self.velocity_y  # Update position based on velocity
 
-        # Prevent falling below ground level
+        # Prevent falling below ground level (fix the Y position to the ground)
         if self.y >= self.fixed_y:
             self.y = self.fixed_y
             self.velocity_y = 0
@@ -141,7 +144,7 @@ class PyGame:
             if self.value >= 8:
                 self.value = 0
 
-            self.update()  # Update character's position
+            self.update(1)  # Update with delta time, simplified here for consistency
             pygame.display.update()  # Refresh display
             Clock.tick(60)  # Control frame rate
 
