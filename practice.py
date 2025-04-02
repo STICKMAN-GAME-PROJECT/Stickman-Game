@@ -2,161 +2,192 @@ import pygame
 import Character as c
 import math
 
+# Initialize Pygame clock to control the frame rate
 Clock = pygame.time.Clock()
 
-# Color constants
-WHITE = (255, 255, 255)
+# Define colors
+WHITE = (220, 221, 220)
 
 class PyGame:
     def __init__(self):
         pygame.init()
-        self.is_jump = False
-        self.HEIGHT, self.WIDTH = 500, 800
-        self.x, self.y = 20, 340
-        self.speed = 10
-        self.jump_right = 10
+        self.HEIGHT, self.WIDTH = 600, 1000
+        self.x, self.y = 20, 420  # Character's initial position
+        self.fixed_y = self.y  # Base position, used for jumping mechanics
+        self.height_rect, self.width_rect = 30, 30
+        self.speed = 4  # Character's walking speed
+
+        # Variables for jumping mechanics
+        self.is_jumping = False  # Keeps track of whether the character is in the air
+        self.velocity_y = 0  # Vertical speed
+        self.gravity = 0.5  # Gravity value (slower fall)
+        self.jump_strength = -12  # Jump strength (faster jump)
+
+        # Movement tracking
         self.walk_left = False
         self.walk_right = False
         self.walk_count = 0
 
-        self.scroll = 0  
-        self.camera_x = 0  
-
-        self.value = 0
-        self.combo_index = 0  # Separate index for combo animation
-        self.combo_playing = False  # Track combo animation state
-
-        # Load character animations
-        self.character_idle = [pygame.image.load(f"Assets/fighter_idle/idle{i}.svg") for i in range(1, 9)]
-        self.character_walk = [pygame.image.load(f"Assets/fighter_walk/walk{i}.svg") for i in range(1, 9)]
-        self.character_run = [pygame.image.load(f"Assets/fighter_run/run{i}.svg") for i in range(1, 9)]
-        self.combo = [pygame.image.load(f"Assets/fighter_combo/combo_{i}.svg") for i in range(1, 20)]
-
+        # Animation handling
+        self.value = 0  # Current animation frame
+        self.animation_speed = {"idle": 0.15, "walk": 0.15, "run": 0.2}  # Different speeds for animations
+        self.current_speed = self.animation_speed["idle"]  # Default animation speed
+        
+        # Load character sprite animations
+        self.character_idle_right = [pygame.image.load(c.stand_Right[i]) for i in range(8)]
+        self.character_walk_right = [pygame.image.load(c.walk[i]) for i in range(8)]
+        self.character_run_right = [pygame.image.load(c.run[i]) for i in range(8)]
+        self.character_walk_left = []
+        self.character_run_left = []
+        self.character_idle_left = []
+        
         # Load environment assets
         self.road = pygame.image.load("Assets/Terrain/road.png")
         self.wall = pygame.image.load("Assets/Terrain/wall.png")
         self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
 
+        #variable for background scrolling 
+        self.building_width = self.buildings[0].get_width()
+        self.building_scroll = 0
+
+        # Fullscreen tracking
+        self.fullscreen = False
+    
+    def toggle_fullscreen(self):
+        """Toggles fullscreen mode and adjusts resolution."""
+        self.fullscreen = not self.fullscreen
+        if self.fullscreen:
+            pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        else:
+            pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+
+    def jump(self):
+        """Handles the jumping mechanics."""
+        if not self.is_jumping:  # Only jump if the character is on the ground
+            self.velocity_y = self.jump_strength  # Apply jump strength
+            self.is_jumping = True
+
+    def update(self, dt):
+        """Updates the character's vertical position based on gravity and time elapsed."""
+        if self.is_jumping:
+            # Gravity is applied to slow down the jump (falling phase)
+            self.velocity_y += self.gravity  # Gravity pulls the character down
+
+            # Apply gravity to vertical velocity (acceleration over time)
+            self.y += self.velocity_y  # Update position based on velocity
+
+        # Prevent falling below ground level (fix the Y position to the ground)
+        if self.y >= self.fixed_y:
+            self.y = self.fixed_y
+            self.velocity_y = 0
+            self.is_jumping = False
+
+    def char_config(self):
+        """Creates left-facing versions of character animations by flipping right-facing images."""
+        for i in range(8):
+            self.character_walk_left.append(pygame.transform.flip(self.character_walk_right[i], True, False))
+            self.character_idle_left.append(pygame.transform.flip(self.character_idle_right[i], True, False))
+            self.character_run_left.append(pygame.transform.flip(self.character_run_right[i], True, False))
+
+
+    
+    #move background, road and wall along to player movement
+    
+
     def main(self):
+        """Main game loop."""
         run = True
-        win = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+        win = pygame.display.set_mode((self.WIDTH, self.HEIGHT))  # Create game window
         pygame.display.set_caption("Stickman")
 
         while run:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+                if event.type == pygame.QUIT:  # Allow quitting the game
                     run = False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                    self.toggle_fullscreen()
 
             keys = pygame.key.get_pressed()
 
-            # Movement logic
-            if keys[pygame.K_LEFT]:
-                if self.x > 20:
-                    if keys[pygame.K_RSHIFT] and self.x >= 30:
-                        self.x -= 40
-                    else:
-                        self.walk_left = True
-                        self.camera_x -= self.speed
-                        self.scroll += self.speed
-                        self.x -= self.speed
-                        self.walk_right = False
+            # Adjust animation speed based on movement
+            if keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]:
+                self.current_speed = self.animation_speed["walk"]
+                if keys[pygame.K_RSHIFT]:  # Running animation speed
+                    self.current_speed = self.animation_speed["run"]
+            else:
+                self.current_speed = self.animation_speed["idle"]
+
+            # Character movement logic
+            if keys[pygame.K_LEFT] and self.x > 0:
+                self.x -= 10 if keys[pygame.K_RSHIFT] else self.speed
+                self.walk_left = True
+                self.walk_right = False
 
             if keys[pygame.K_RIGHT]:
-                if self.x < 7700:
-                    if keys[pygame.K_RSHIFT] and self.x < 740:
-                        self.x += 40
-                        self.camera_x += 40
-                        self.scroll -= 10
-                    else:
-                        self.walk_right = True
-                        self.x += self.speed
-                        self.camera_x += self.speed
-                        self.scroll -= self.speed
-                    self.walk_left = False
+                self.x += 10 if keys[pygame.K_RSHIFT] else self.speed
+                self.walk_right = True
+                self.walk_left = False
 
-            # Jump logic
-            if not self.is_jump:
-                if keys[pygame.K_UP]:
-                    self.is_jump = True
-            else:
-                if self.jump_right >= -10:
-                    neg = 1 if self.jump_right >= 0 else -1
-                    self.y -= (self.jump_right**2) * 0.3 * neg
-                    self.jump_right -= 1
-                else:
-                    self.is_jump = False
-                    self.jump_right = 10
+            if keys[pygame.K_UP]:
+                self.jump()
 
+            # Drawing background
             win.fill(WHITE)
 
-            # Load and scale animations
-            char_idle = pygame.transform.scale(self.character_idle[self.value], (100, 140))
-            char_walk = pygame.transform.scale(self.character_walk[self.value], (100, 140))
-            char_run = pygame.transform.scale(self.character_run[self.value], (100, 140))
-            char_combo = pygame.transform.scale(self.combo[self.combo_index], (100, 140))
-
             # Scrolling background
-            building_width = self.buildings[0].get_width()
-            tiles = math.ceil(self.WIDTH / building_width)
+            tiles = math.ceil(self.WIDTH / self.building_width) + 1
 
-            for i in range(tiles):
+            #Drawing background buildings
+            for i in range(0, tiles):
                 for b in self.buildings:
-                    win.blit(b, (i * building_width + self.scroll - self.camera_x, 0))
+                    win.blit(b, (i * self.building_width + self.building_scroll, 0))
 
-            # Scrolling wall
-            wall_width = self.wall.get_width()
-            self.wall = pygame.transform.scale(self.wall, (2000, 200))
-            for i in range(math.ceil(self.WIDTH / wall_width)):
-                win.blit(self.wall, (i * wall_width + self.scroll - self.camera_x, 260))
+            
+            self.building_scroll -= 6
+            if abs(self.building_scroll) > self.building_width:
+                self.building_scroll = 0
 
-            # Scrolling road
-            road_width = self.road.get_width()
-            self.road = pygame.transform.scale(self.road, (2000, 60))
-            for i in range(math.ceil(self.WIDTH / road_width)):
-                win.blit(self.road, (i * road_width + self.scroll - self.camera_x, 440))
+            # Drawing wall
+            wall = pygame.transform.scale(self.wall, (self.WIDTH, 180))
+            win.blit(wall, (0, 320))
+            
+            # Drawing road
+            road = pygame.transform.scale(self.road, (self.WIDTH, 100))
+            win.blit(road, (0, 500))
 
-            # Reset scroll overflow
-            if abs(self.scroll) > road_width:
-                self.scroll = 0
 
-            # Player position relative to screen
-            player_screen_x = 20
+            # Reset animation frame if it exceeds limit
+            if self.value >= 8:
+                self.value = 0
 
-            # Handle combo animation
-            if keys[pygame.K_KP_0]:  
-                self.combo_playing = True  # Start playing combo
+            # Scale character sprites before displaying
+            char_idle_right = pygame.transform.scale(self.character_idle_right[int(self.value)], (100, 140))
+            char_idle_left = pygame.transform.scale(self.character_idle_left[int(self.value)], (100, 140))
+            char_walk_right = pygame.transform.scale(self.character_walk_right[int(self.value)], (100, 140))
+            char_walk_left = pygame.transform.scale(self.character_walk_left[int(self.value)], (100, 140))
+            char_run_right = pygame.transform.scale(self.character_run_right[int(self.value)], (100, 140))
+            char_run_left = pygame.transform.scale(self.character_run_left[int(self.value)], (100, 140))
 
-            if self.combo_playing:
-                char_sprite = char_combo
-                if self.combo_index < len(self.combo) - 1:
-                    self.combo_index += 1  # Play next frame
-                else:
-                    self.combo_playing = False  # Stop when last frame reached
-                    self.combo_index = 0  # Reset for next use
+            # Display the correct animation based on movement
+            if not keys[pygame.K_LEFT] and not keys[pygame.K_RIGHT]:
+                win.blit(char_idle_left if self.walk_left else char_idle_right, (self.x, self.y))
+            elif keys[pygame.K_RSHIFT]:
+                win.blit(char_run_right if self.walk_right else char_run_left, (self.x, self.y))
             else:
-                # Regular animations when combo isn't playing
-                if keys[pygame.K_RSHIFT]:  
-                    char_sprite = char_run
-                elif keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]:  
-                    char_sprite = char_walk
-                else:  
-                    char_sprite = char_idle
+                win.blit(char_walk_left if self.walk_left else char_walk_right, (self.x, self.y))
 
+            # Increment animation frame based on speed
+            self.value += self.current_speed
+            if self.value >= 8:
+                self.value = 0
 
-            if keys[pygame.K_LEFT]:
-                char_sprite = pygame.transform.flip(char_sprite, True, False)
+            self.update(1)  # Update with delta time, simplified here for consistency
+            pygame.display.update()  # Refresh display
+            Clock.tick(60)  # Control frame rate
 
-            # Draw character
-            win.blit(char_sprite, (player_screen_x, self.y))
-
-
-            if not self.combo_playing:
-                self.value = (self.value + 1) % len(self.character_idle)
-
-            pygame.display.update()
-            Clock.tick(10)  # Adjust FPS
         pygame.quit()
 
 if __name__ == "__main__":
     pyg = PyGame()
+    pyg.char_config()
     pyg.main()
