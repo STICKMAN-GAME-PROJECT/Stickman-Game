@@ -86,6 +86,9 @@ combo_17 = os.path.join(path_fighter_combo, "combo_17.svg")
 combo_18 = os.path.join(path_fighter_combo, "combo_18.svg")
 combo_19 = os.path.join(path_fighter_combo, "combo_19.svg")
 
+combo = [combo_1, combo_2, combo_3, combo_4, combo_5, combo_6, combo_7, combo_8, combo_9, combo_10,
+         combo_11, combo_12, combo_13, combo_14, combo_15, combo_16, combo_17, combo_18, combo_19]
+
 # ================================================================
 
 '''
@@ -102,5 +105,8 @@ bamboo_5 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_5.svg')
 bamboo_6 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_6.svg')
 bamboo_7 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_7.svg')
 bamboo_8 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_8.svg')
+
+bamboo = [bamboo_1, bamboo_2, bamboo_3, bamboo_4,
+          bamboo_5, bamboo_6, bamboo_7, bamboo_8]
 
 # =============================================================================
