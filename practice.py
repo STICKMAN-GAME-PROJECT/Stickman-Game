@@ -159,8 +159,8 @@ class PyGame:
 
             # Update world position and scroll values
             self.world_x += move_amount
-            self.building_scroll += move_amount * 0.5  # 50% speed
-            self.wall_scroll += move_amount * 0.8     # 80% speed
+            self.building_scroll += move_amount * 0.3  # 50% speed
+            self.wall_scroll += move_amount * 0.65     # 80% speed
             self.road_scroll += move_amount           # 100% speed
 
             if keys[pygame.K_UP]:
