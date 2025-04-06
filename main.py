@@ -1,6 +1,7 @@
 import pygame
+import os
 import Character as c
-
+import sys
 
 Clock = pygame.time.Clock()
 
@@ -19,15 +20,18 @@ class PyGame:
         pygame.init()
         self.HEIGHT, self.WIDTH = 500, 800
         self.x, self.y = 20, 320
-        self.fixed_y = self.y   # Save base position in different variable. will be used for jumping
+        # Save base position in different variable. will be used for jumping
+        self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 10
 
         # Things needed for jumping
         self.is_jumping = False  # Set initial jump status to false.
         self.velocity_y = 0      # initial vertical velocity.
-        self.gravity = 16        # gravity value (setting high for faster animation).
-        self.jump_strength = -80 # how high and strong the jump should be. (affects animation)
+        # gravity value (setting high for faster animation).
+        self.gravity = 16
+        # how high and strong the jump should be. (affects animation)
+        self.jump_strength = -80
 
         self.walk_left = False
         self.walk_right = False
@@ -136,9 +140,16 @@ class PyGame:
                 # initiate jumping
                 self.jump()
 
+            if keys[pygame.K_LSHIFT] == True:
+                if keys[pygame.K_ESCAPE] == True:
+                    # wil be used for exiting the game
+                    pygame.quit()
+                    sys.exit()
+
+            if keys[pygame.K_p] == True:
+                pass  # will be used for the pause button
 
             win.fill(WHITE)
-
 
             char_idle_right = self.character_idle_right[self.value]
             char_idle_right = pygame.transform.scale(
@@ -178,7 +189,7 @@ class PyGame:
             # Update position
             self.update()
             pygame.display.update()
-            Clock.tick(14) # 14 fps
+            Clock.tick(14)  # 14 fps
         pygame.quit()
 
 
@@ -186,3 +197,4 @@ if __name__ == "__main__":
     pyg = PyGame()
     pyg.char_config()
     pyg.main()
+    sys.exit()
