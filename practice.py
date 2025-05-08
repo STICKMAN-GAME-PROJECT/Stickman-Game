@@ -2,6 +2,7 @@ import pygame
 import Character as c
 import math
 
+
 # Initialize Pygame clock to control the frame rate
 Clock = pygame.time.Clock()
 
@@ -12,7 +13,7 @@ class PyGame:
     def __init__(self):
         pygame.init()
         self.HEIGHT, self.WIDTH = 600, 1000
-        self.x, self.y = 500, 420  # Start player in the middle of the screen
+        self.x, self.y = 500, 180  # Start player in the middle of the screen
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
@@ -30,7 +31,7 @@ class PyGame:
 
         # Animation handling
         self.value = 0
-        self.animation_speed = {"idle": 0.15, "walk": 0.15, "run": 0.2}
+        self.animation_speed = {"idle": 0.23, "walk": 0.23, "run": 0.4}
         self.current_speed = self.animation_speed["idle"]
         
         # Character animations
@@ -43,7 +44,7 @@ class PyGame:
         
         # Environment assets
         self.road = pygame.image.load("Assets/Terrain/road.png")
-        self.wall = pygame.image.load("Assets/Terrain/wall.png")
+        self.wall = pygame.image.load("Assets/Terrain/wallr.png")
         self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
 
         # Background dimensions
@@ -58,10 +59,12 @@ class PyGame:
         
         # Player's world position
         self.world_x = self.x
-        self.screen_x = self.WIDTH // 2 - 50  # Center player horizontally
+        self.screen_x = self.WIDTH // 2  # Center player horizontally
+        self.player_width = 500  # Store player width for boundary checks
         
         # Fullscreen tracking
         self.fullscreen = False
+        self.enemy_exists = False
     
     def toggle_fullscreen(self):
         self.fullscreen = not self.fullscreen
@@ -84,6 +87,10 @@ class PyGame:
             self.y = self.fixed_y
             self.velocity_y = 0
             self.is_jumping = False
+
+        if self.enemy_exists:
+            # Clamp player position to keep entire sprite on screen
+            self.world_x = max(0, min(self.world_x, self.WIDTH - self.player_width))
 
     def char_config(self):
         for i in range(8):
@@ -159,9 +166,24 @@ class PyGame:
 
             # Update world position and scroll values
             self.world_x += move_amount
-            self.building_scroll += move_amount * 0.5  # 50% speed
-            self.wall_scroll += move_amount * 0.8     # 80% speed
-            self.road_scroll += move_amount           # 100% speed
+
+            # Check if an enemy exists
+            if self.enemy_exists:
+                # Update screen_x to match world_x (player moves on screen)
+                self.screen_x = self.world_x  
+            else:
+                # Normal scrolling behavior (player stays centered)
+                self.screen_x = self.WIDTH // 2 - self.player_width // 2  # True center  
+                self.building_scroll += move_amount * 0.3  
+                self.wall_scroll += move_amount * 0.65  
+                self.road_scroll += move_amount  
+
+            #enemy tigger toggle
+            if keys[pygame.K_TAB]:
+                self.enemy_exists = not self.enemy_exists
+                if self.enemy_exists:
+                    self.world_x = self.screen_x
+
 
             if keys[pygame.K_UP]:
                 self.jump()
@@ -175,12 +197,12 @@ class PyGame:
                 self.value = 0
 
             # Scale character sprites
-            char_idle_right = pygame.transform.scale(self.character_idle_right[int(self.value)], (100, 140))
-            char_idle_left = pygame.transform.scale(self.character_idle_left[int(self.value)], (100, 140))
-            char_walk_right = pygame.transform.scale(self.character_walk_right[int(self.value)], (100, 140))
-            char_walk_left = pygame.transform.scale(self.character_walk_left[int(self.value)], (100, 140))
-            char_run_right = pygame.transform.scale(self.character_run_right[int(self.value)], (100, 140))
-            char_run_left = pygame.transform.scale(self.character_run_left[int(self.value)], (100, 140))
+            char_idle_right = pygame.transform.scale(self.character_idle_right[int(self.value)], (500, 500))
+            char_idle_left = pygame.transform.scale(self.character_idle_left[int(self.value)], (500, 500))
+            char_walk_right = pygame.transform.scale(self.character_walk_right[int(self.value)], (500, 500))
+            char_walk_left = pygame.transform.scale(self.character_walk_left[int(self.value)], (500, 500))
+            char_run_right = pygame.transform.scale(self.character_run_right[int(self.value)], (500, 500))
+            char_run_left = pygame.transform.scale(self.character_run_left[int(self.value)], (500, 500))
 
             # Display animation
             if not keys[pygame.K_LEFT] and not keys[pygame.K_RIGHT]:
