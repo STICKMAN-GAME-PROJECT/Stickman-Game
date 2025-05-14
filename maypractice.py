@@ -89,8 +89,11 @@ class PyGame:
             self.velocity_y = 0
             self.is_jumping = False
 
-        # Clamp world_x to prevent negative positions or going too far
-        self.world_x = max(0, min(self.world_x, self.WIDTH * 2))  # Adjust max based on your world size
+        # Clamp world_x in scrolling mode or screen_x in free movement mode
+        if self.enemy_exists:
+            self.screen_x = max(0, min(self.screen_x, self.WIDTH - self.player_width))
+        else:
+            self.world_x = max(0, min(self.world_x, self.WIDTH * 2))  # Adjust max based on world size
 
     def char_config(self):
         for i in range(8):
@@ -164,9 +167,6 @@ class PyGame:
                 self.walk_right = True
                 self.walk_left = False
 
-            # Update world_x
-            self.world_x += move_amount
-
             # Handle TAB toggle
             current_tab_state = keys[pygame.K_TAB]
             tab_just_pressed = current_tab_state and not self.last_tab_state
@@ -176,14 +176,15 @@ class PyGame:
                 print(f"Before toggle: enemy_exists={self.enemy_exists}, world_x={self.world_x}, screen_x={self.screen_x}, road_scroll={self.road_scroll}, free_mode_offset={self.free_mode_offset}")
                 self.enemy_exists = not self.enemy_exists
                 if self.enemy_exists:
-                    # Free movement mode: keep screen_x fixed, set offset
+                    # Free movement mode: start with screen_x at 50, set offset
                     self.screen_x = 50
                     self.free_mode_offset = self.world_x - 50  # Background offset
                     self.road_scroll = self.free_mode_offset
                     self.building_scroll = self.free_mode_offset * 0.3
                     self.wall_scroll = self.free_mode_offset * 0.65
                 else:
-                    # Scrolling mode: fix screen_x, set scroll
+                    # Scrolling mode: fix screen_x, update world_x based on screen_x
+                    self.world_x = self.screen_x + self.free_mode_offset
                     self.screen_x = 50
                     self.road_scroll = self.world_x - 50
                     self.building_scroll = self.road_scroll * 0.3
@@ -191,15 +192,16 @@ class PyGame:
                     self.free_mode_offset = 0
                 print(f"After toggle: enemy_exists={self.enemy_exists}, world_x={self.world_x}, screen_x={self.screen_x}, road_scroll={self.road_scroll}, free_mode_offset={self.free_mode_offset}")
 
-            # Update screen_x and scrolls based on mode
+            # Update positions based on mode
             if self.enemy_exists:
-                # Free movement: screen_x fixed, background static at offset
-                self.screen_x = 50
+                # Free movement: move screen_x, keep background static
+                self.screen_x += move_amount
                 self.road_scroll = self.free_mode_offset
                 self.building_scroll = self.free_mode_offset * 0.3
                 self.wall_scroll = self.free_mode_offset * 0.65
             else:
-                # Scrolling mode: screen_x fixed, background scrolls
+                # Scrolling mode: move world_x, scroll background
+                self.world_x += move_amount
                 self.screen_x = 50
                 self.road_scroll = self.world_x - 50
                 self.building_scroll = self.road_scroll * 0.3
