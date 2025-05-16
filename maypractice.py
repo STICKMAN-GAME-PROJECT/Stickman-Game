@@ -12,7 +12,7 @@ class PyGame:
     def __init__(self):
         pygame.init()
         self.HEIGHT, self.WIDTH = 600, 1000
-        self.x, self.y = 500, 250 # Start player in the middle vertically
+        self.x, self.y = 500, 260  # Start player in the middle vertically
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
@@ -59,9 +59,9 @@ class PyGame:
         self.free_mode_offset = 0  # Offset for background in free movement mode
         
         # Player's world position
-        self.world_x = 500  # Start centered in scrolling mode
-        self.screen_x = 1000 #Center player at WIDTH / 2
         self.player_width = 400  # Match sprite size
+        self.world_x = 500  # Start centered in scrolling mode
+        self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 500 - 50 = 450
 
         # Fullscreen and enemy tracking
         self.fullscreen = False
@@ -69,7 +69,7 @@ class PyGame:
         self.last_tab_state = False  # For TAB key press detection
 
         # Scroll transition for smooth toggling
-        self.scroll_transition_frames = 10  # Transition over 10 frames
+        self.scroll_transition_frames = 1 # Transition over 10 frames
         self.current_transition_frame = 0
         self.target_road_scroll = 0
 
@@ -174,7 +174,6 @@ class PyGame:
                 self.walk_left = False
 
             # Handle TAB toggle
-
             current_tab_state = keys[pygame.K_TAB]
             tab_just_pressed = current_tab_state and not self.last_tab_state
             self.last_tab_state = current_tab_state
@@ -184,15 +183,15 @@ class PyGame:
                 self.enemy_exists = not self.enemy_exists
                 if self.enemy_exists:
                     # Free movement mode: start with screen_x at center, set offset
-                    self.screen_x = self.WIDTH / 2  # Center player
-                    self.free_mode_offset = self.world_x - self.WIDTH / 2  # Background offset
+                    self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 450
+                    self.free_mode_offset = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
                     self.road_scroll = self.free_mode_offset
                     self.building_scroll = self.free_mode_offset * 0.3
                     self.wall_scroll = self.free_mode_offset * 0.65
                 else:
                     # Scrolling mode: fix screen_x at center, use current world_x
-                    self.screen_x = self.WIDTH / 2
-                    self.target_road_scroll = self.world_x - self.WIDTH / 2  # Set target for interpolation
+                    self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 450
+                    self.target_road_scroll = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
                     self.current_transition_frame = 0
                     self.road_scroll = self.free_mode_offset  # Start from free mode offset
                     self.building_scroll = self.road_scroll * 0.3
@@ -211,14 +210,14 @@ class PyGame:
             else:
                 # Scrolling mode: move world_x, scroll background
                 self.world_x += move_amount
-                self.screen_x = self.WIDTH / 2  # Center player
+                self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 450
                 # Interpolate scroll if transitioning
                 if self.current_transition_frame < self.scroll_transition_frames:
                     t = self.current_transition_frame / self.scroll_transition_frames
                     self.road_scroll = self.road_scroll * (1 - t) + self.target_road_scroll * t
                     self.current_transition_frame += 1
                 else:
-                    self.road_scroll = self.world_x - self.WIDTH / 2
+                    self.road_scroll = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
                 self.building_scroll = self.road_scroll * 0.3
                 self.wall_scroll = self.road_scroll * 0.65
 
