@@ -27,11 +27,12 @@ class PyGame:
         # Movement tracking
         self.walk_left = False
         self.walk_right = False
+        self.facing_left = False  # Track last facing direction
         self.walk_count = 0
 
         # Animation handling
         self.value = 0
-        self.animation_speed = {"idle": 0.23, "walk": 0.23, "run": 0.4}
+        self.animation_speed = {"idle": 0.23, "walk": 0.23, "run": 0.4, "combo": 0.3}
         self.current_speed = self.animation_speed["idle"]
         
         # Character animations (pre-scaled to 400x400 for performance)
@@ -39,9 +40,11 @@ class PyGame:
         self.character_idle_right = [pygame.transform.scale(pygame.image.load(c.stand_Right[i]), self.sprite_size) for i in range(8)]
         self.character_walk_right = [pygame.transform.scale(pygame.image.load(c.walk[i]), self.sprite_size) for i in range(8)]
         self.character_run_right = [pygame.transform.scale(pygame.image.load(c.run[i]), self.sprite_size) for i in range(8)]
+        self.character_combo_right = [pygame.transform.scale(pygame.image.load(c.combo[i]), self.sprite_size) for i in range(19)]
         self.character_walk_left = []
         self.character_run_left = []
         self.character_idle_left = []
+        self.character_combo_left = []
         
         # Environment assets
         self.road = pygame.image.load("Assets/Terrain/road.png")
@@ -68,6 +71,11 @@ class PyGame:
         self.fullscreen = False
         self.enemy_exists = False
         self.last_tab_state = False
+
+        # Combo state
+        self.is_comboing = False
+        self.combo_value = 0
+        self.combo_frame_count = 19  # Total combo frames
 
         # Enemies
         self.enemies = [Enemy(world_x) for world_x in range(1000, 10000, 1000)]
@@ -110,6 +118,8 @@ class PyGame:
             self.character_walk_left.append(pygame.transform.flip(self.character_walk_right[i], True, False))
             self.character_idle_left.append(pygame.transform.flip(self.character_idle_right[i], True, False))
             self.character_run_left.append(pygame.transform.flip(self.character_run_right[i], True, False))
+        for i in range(19):
+            self.character_combo_left.append(pygame.transform.flip(self.character_combo_right[i], True, False))
 
     def draw_background(self, win):
         # Buildings (farthest layer)
@@ -154,9 +164,16 @@ class PyGame:
 
     def update_animations(self):
         # Update player animation
-        self.value += self.current_speed
-        if self.value >= 8:
-            self.value -= 8
+        if self.is_comboing:
+            self.combo_value += self.animation_speed["combo"]
+            if self.combo_value >= self.combo_frame_count:
+                self.combo_value = 0
+                self.is_comboing = False
+                self.current_speed = self.animation_speed["idle"]
+        else:
+            self.value += self.current_speed
+            if self.value >= 8:
+                self.value -= 8
 
         # Update enemy animations
         for enemy in self.enemies:
@@ -180,6 +197,9 @@ class PyGame:
                     run = False
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                     self.toggle_fullscreen()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and self.draw_enemies(win) > 0 and not self.is_comboing:
+                    self.is_comboing = True
+                    self.current_speed = self.animation_speed["combo"]
 
             keys = pygame.key.get_pressed()
 
@@ -197,10 +217,12 @@ class PyGame:
                 move_amount = -(10 if keys[pygame.K_RSHIFT] else self.speed)
                 self.walk_left = True
                 self.walk_right = False
+                self.facing_left = True
             elif keys[pygame.K_RIGHT]:
                 move_amount = 10 if keys[pygame.K_RSHIFT] else self.speed
                 self.walk_right = True
                 self.walk_left = False
+                self.facing_left = False
             else:
                 self.walk_left = False
                 self.walk_right = False
@@ -211,7 +233,6 @@ class PyGame:
             self.last_tab_state = current_tab_state
 
             if tab_just_pressed:
-                print(f"Before toggle: enemy_exists={self.enemy_exists}, world_x={self.world_x}, screen_x={self.screen_x}, road_scroll={self.road_scroll}, free_mode_offset={self.free_mode_offset}")
                 self.enemy_exists = not self.enemy_exists
                 if self.enemy_exists:
                     self.screen_x = self.WIDTH / 2 - self.player_width / 2
@@ -227,7 +248,6 @@ class PyGame:
                     self.building_scroll = self.road_scroll * 0.3
                     self.wall_scroll = self.road_scroll * 0.65
                     self.free_mode_offset = 0
-                print(f"After toggle: enemy_exists={self.enemy_exists}, world_x={self.world_x}, screen_x={self.screen_x}, road_scroll={self.road_scroll}, free_mode_offset={self.free_mode_offset}")
 
             # Update positions based on mode
             if self.enemy_exists:
@@ -267,10 +287,14 @@ class PyGame:
             char_walk_left = self.character_walk_left[int(self.value)]
             char_run_right = self.character_run_right[int(self.value)]
             char_run_left = self.character_run_left[int(self.value)]
+            char_combo_right = self.character_combo_right[int(self.combo_value)] if self.is_comboing else None
+            char_combo_left = self.character_combo_left[int(self.combo_value)] if self.is_comboing else None
 
             # Display animation
-            if not keys[pygame.K_LEFT] and not keys[pygame.K_RIGHT]:
-                win.blit(char_idle_left if self.walk_left else char_idle_right, (self.screen_x, self.y))
+            if self.is_comboing:
+                win.blit(char_combo_left if self.facing_left else char_combo_right, (self.screen_x, self.y))
+            elif not keys[pygame.K_LEFT] and not keys[pygame.K_RIGHT]:
+                win.blit(char_idle_left if self.facing_left else char_idle_right, (self.screen_x, self.y))
             elif keys[pygame.K_RSHIFT]:
                 win.blit(char_run_right if self.walk_right else char_run_left, (self.screen_x, self.y))
             else:
@@ -278,8 +302,7 @@ class PyGame:
 
             self.update(dt)
             pygame.display.update()
-           
-
+            
         pygame.quit()
 
 if __name__ == "__main__":
