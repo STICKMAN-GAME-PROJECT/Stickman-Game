@@ -89,11 +89,11 @@ class PyGame:
             self.velocity_y = 0
             self.is_jumping = False
 
-        # Clamp world_x in scrolling mode or screen_x in free movement mode
+        # Clamp positions
         if self.enemy_exists:
             self.screen_x = max(0, min(self.screen_x, self.WIDTH - self.player_width))
         else:
-            self.world_x = max(0, min(self.world_x, self.WIDTH * 2))  # Adjust max based on world size
+            self.world_x = max(0, min(self.world_x, self.WIDTH * 1))  # Adjust max based on world size
 
     def char_config(self):
         for i in range(8):
@@ -183,8 +183,7 @@ class PyGame:
                     self.building_scroll = self.free_mode_offset * 0.3
                     self.wall_scroll = self.free_mode_offset * 0.65
                 else:
-                    # Scrolling mode: fix screen_x, update world_x based on screen_x
-                    self.world_x = self.screen_x + self.free_mode_offset
+                    # Scrolling mode: fix screen_x, use current world_x
                     self.screen_x = 50
                     self.road_scroll = self.world_x - 50
                     self.building_scroll = self.road_scroll * 0.3
@@ -194,8 +193,9 @@ class PyGame:
 
             # Update positions based on mode
             if self.enemy_exists:
-                # Free movement: move screen_x, keep background static
+                # Free movement: move screen_x, update world_x
                 self.screen_x += move_amount
+                self.world_x = self.screen_x + self.free_mode_offset
                 self.road_scroll = self.free_mode_offset
                 self.building_scroll = self.free_mode_offset * 0.3
                 self.wall_scroll = self.free_mode_offset * 0.65
