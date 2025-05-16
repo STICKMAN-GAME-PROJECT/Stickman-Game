@@ -1,7 +1,7 @@
 import pygame
 import Character as c
 import math
-from enemy import Enemy  # Import Enemy class from enemy.py
+from enemy import Enemy
 
 # Initialize Pygame clock to control the frame rate
 Clock = pygame.time.Clock()
@@ -13,7 +13,7 @@ class PyGame:
     def __init__(self):
         pygame.init()
         self.HEIGHT, self.WIDTH = 600, 1000
-        self.x, self.y = 500, 250  # Start player in the middle vertically
+        self.x, self.y = 500, 250
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
@@ -34,7 +34,7 @@ class PyGame:
         self.animation_speed = {"idle": 0.23, "walk": 0.23, "run": 0.4}
         self.current_speed = self.animation_speed["idle"]
         
-        # Character animations (pre-scaled to 100x100 for performance)
+        # Character animations (pre-scaled to 400x400 for performance)
         self.sprite_size = (400, 400)
         self.character_idle_right = [pygame.transform.scale(pygame.image.load(c.stand_Right[i]), self.sprite_size) for i in range(8)]
         self.character_walk_right = [pygame.transform.scale(pygame.image.load(c.walk[i]), self.sprite_size) for i in range(8)]
@@ -62,7 +62,7 @@ class PyGame:
         # Player's world position
         self.player_width = 400
         self.world_x = 500
-        self.screen_x = self.WIDTH / 2 - self.player_width / 2  # 450, centers player
+        self.screen_x = self.WIDTH / 2 - self.player_width / 2  # 300
 
         # Fullscreen and enemy tracking
         self.fullscreen = False
@@ -70,7 +70,7 @@ class PyGame:
         self.last_tab_state = False
 
         # Enemies
-        self.enemies = [Enemy(world_x) for world_x in range(1000, 10000, 1000)]  # Enemies at 1000, 2000, ..., 9000
+        self.enemies = [Enemy(world_x) for world_x in range(1000, 10000, 1000)]
 
         # Scroll transition for smooth toggling
         self.scroll_transition_frames = 10
@@ -146,12 +146,26 @@ class PyGame:
         visible_enemies = 0
         scroll_offset = self.free_mode_offset if self.enemy_exists else self.road_scroll
         for enemy in self.enemies:
-            enemy.draw(win, scroll_offset)  # Use Enemy's draw method
-            # Count visible enemies (approximate check)
+            enemy.draw(win, scroll_offset, self.walk_left, self.walk_right)
             enemy_screen_x = enemy.world_x - scroll_offset
             if -enemy.width <= enemy_screen_x <= self.WIDTH:
                 visible_enemies += 1
         return visible_enemies
+
+    def update_animations(self):
+        # Update player animation
+        self.value += self.current_speed
+        if self.value >= 8:
+            self.value -= 8
+
+        # Update enemy animations
+        for enemy in self.enemies:
+            enemy.update_animation()
+
+    def update_enemies(self):
+        # Update enemy movements
+        for enemy in self.enemies:
+            enemy.update_movement()
 
     def main(self):
         run = True
@@ -187,6 +201,9 @@ class PyGame:
                 move_amount = 10 if keys[pygame.K_RSHIFT] else self.speed
                 self.walk_right = True
                 self.walk_left = False
+            else:
+                self.walk_left = False
+                self.walk_right = False
 
             # Handle TAB toggle
             current_tab_state = keys[pygame.K_TAB]
@@ -234,14 +251,14 @@ class PyGame:
             if keys[pygame.K_UP]:
                 self.jump()
 
+            # Update animations and movements
+            self.update_animations()
+            self.update_enemies()
+
             # Drawing
             win.fill(WHITE)
             self.draw_background(win)
             visible_enemies = self.draw_enemies(win)
-
-            # Animation (sprites already pre-scaled)
-            if self.value >= 8:
-                self.value = 0
 
             # Use pre-scaled sprites
             char_idle_right = self.character_idle_right[int(self.value)]
@@ -259,10 +276,9 @@ class PyGame:
             else:
                 win.blit(char_walk_left if self.walk_left else char_walk_right, (self.screen_x, self.y))
 
-            self.value += self.current_speed
             self.update(dt)
             pygame.display.update()
-            print(f"Visible enemies: {visible_enemies}")
+           
 
         pygame.quit()
 
