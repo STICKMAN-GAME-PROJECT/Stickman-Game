@@ -1,6 +1,7 @@
 import pygame
 import Character as c
 import math
+from enemy import Enemy  # Import Enemy class from enemy.py
 
 # Initialize Pygame clock to control the frame rate
 Clock = pygame.time.Clock()
@@ -12,7 +13,7 @@ class PyGame:
     def __init__(self):
         pygame.init()
         self.HEIGHT, self.WIDTH = 600, 1000
-        self.x, self.y = 500, 260  # Start player in the middle vertically
+        self.x, self.y = 500, 250  # Start player in the middle vertically
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
@@ -34,7 +35,7 @@ class PyGame:
         self.current_speed = self.animation_speed["idle"]
         
         # Character animations (pre-scaled to 100x100 for performance)
-        self.sprite_size = (400, 400)  # Reduced sprite size
+        self.sprite_size = (400, 400)
         self.character_idle_right = [pygame.transform.scale(pygame.image.load(c.stand_Right[i]), self.sprite_size) for i in range(8)]
         self.character_walk_right = [pygame.transform.scale(pygame.image.load(c.walk[i]), self.sprite_size) for i in range(8)]
         self.character_run_right = [pygame.transform.scale(pygame.image.load(c.run[i]), self.sprite_size) for i in range(8)]
@@ -56,20 +57,23 @@ class PyGame:
         self.building_scroll = 0
         self.road_scroll = 0
         self.wall_scroll = 0
-        self.free_mode_offset = 0  # Offset for background in free movement mode
+        self.free_mode_offset = 0
         
         # Player's world position
-        self.player_width = 400  # Match sprite size
-        self.world_x = 500  # Start centered in scrolling mode
-        self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 500 - 50 = 450
+        self.player_width = 400
+        self.world_x = 500
+        self.screen_x = self.WIDTH / 2 - self.player_width / 2  # 450, centers player
 
         # Fullscreen and enemy tracking
         self.fullscreen = False
         self.enemy_exists = False
-        self.last_tab_state = False  # For TAB key press detection
+        self.last_tab_state = False
+
+        # Enemies
+        self.enemies = [Enemy(world_x) for world_x in range(1000, 10000, 1000)]  # Enemies at 1000, 2000, ..., 9000
 
         # Scroll transition for smooth toggling
-        self.scroll_transition_frames = 1 # Transition over 10 frames
+        self.scroll_transition_frames = 10
         self.current_transition_frame = 0
         self.target_road_scroll = 0
 
@@ -99,7 +103,7 @@ class PyGame:
         if self.enemy_exists:
             self.screen_x = max(0, min(self.screen_x, self.WIDTH - self.player_width))
         else:
-            self.world_x = max(0, min(self.world_x, 10000))  # Larger world size
+            self.world_x = max(0, min(self.world_x, 10000))
 
     def char_config(self):
         for i in range(8):
@@ -137,6 +141,17 @@ class PyGame:
             if -self.road_width <= pos_x <= self.WIDTH:
                 road = pygame.transform.scale(self.road, (self.road_width, 100))
                 win.blit(road, (pos_x, 500))
+
+    def draw_enemies(self, win):
+        visible_enemies = 0
+        scroll_offset = self.free_mode_offset if self.enemy_exists else self.road_scroll
+        for enemy in self.enemies:
+            enemy.draw(win, scroll_offset)  # Use Enemy's draw method
+            # Count visible enemies (approximate check)
+            enemy_screen_x = enemy.world_x - scroll_offset
+            if -enemy.width <= enemy_screen_x <= self.WIDTH:
+                visible_enemies += 1
+        return visible_enemies
 
     def main(self):
         run = True
@@ -182,18 +197,16 @@ class PyGame:
                 print(f"Before toggle: enemy_exists={self.enemy_exists}, world_x={self.world_x}, screen_x={self.screen_x}, road_scroll={self.road_scroll}, free_mode_offset={self.free_mode_offset}")
                 self.enemy_exists = not self.enemy_exists
                 if self.enemy_exists:
-                    # Free movement mode: start with screen_x at center, set offset
-                    self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 450
+                    self.screen_x = self.WIDTH / 2 - self.player_width / 2
                     self.free_mode_offset = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
                     self.road_scroll = self.free_mode_offset
                     self.building_scroll = self.free_mode_offset * 0.3
                     self.wall_scroll = self.free_mode_offset * 0.65
                 else:
-                    # Scrolling mode: fix screen_x at center, use current world_x
-                    self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 450
+                    self.screen_x = self.WIDTH / 2 - self.player_width / 2
                     self.target_road_scroll = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
                     self.current_transition_frame = 0
-                    self.road_scroll = self.free_mode_offset  # Start from free mode offset
+                    self.road_scroll = self.free_mode_offset
                     self.building_scroll = self.road_scroll * 0.3
                     self.wall_scroll = self.road_scroll * 0.65
                     self.free_mode_offset = 0
@@ -201,17 +214,14 @@ class PyGame:
 
             # Update positions based on mode
             if self.enemy_exists:
-                # Free movement: move screen_x, update world_x
                 self.screen_x += move_amount
                 self.world_x = self.screen_x + self.free_mode_offset
                 self.road_scroll = self.free_mode_offset
                 self.building_scroll = self.free_mode_offset * 0.3
                 self.wall_scroll = self.free_mode_offset * 0.65
             else:
-                # Scrolling mode: move world_x, scroll background
                 self.world_x += move_amount
-                self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 450
-                # Interpolate scroll if transitioning
+                self.screen_x = self.WIDTH / 2 - self.player_width / 2
                 if self.current_transition_frame < self.scroll_transition_frames:
                     t = self.current_transition_frame / self.scroll_transition_frames
                     self.road_scroll = self.road_scroll * (1 - t) + self.target_road_scroll * t
@@ -227,6 +237,7 @@ class PyGame:
             # Drawing
             win.fill(WHITE)
             self.draw_background(win)
+            visible_enemies = self.draw_enemies(win)
 
             # Animation (sprites already pre-scaled)
             if self.value >= 8:
@@ -251,6 +262,7 @@ class PyGame:
             self.value += self.current_speed
             self.update(dt)
             pygame.display.update()
+            print(f"Visible enemies: {visible_enemies}")
 
         pygame.quit()
 
