@@ -12,7 +12,7 @@ class PyGame:
     def __init__(self):
         pygame.init()
         self.HEIGHT, self.WIDTH = 600, 1000
-        self.x, self.y = 500, 420  # Start player in the middle of the screen
+        self.x, self.y = 500, 260  # Start player in the middle vertically
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
@@ -30,20 +30,21 @@ class PyGame:
 
         # Animation handling
         self.value = 0
-        self.animation_speed = {"idle": 0.15, "walk": 0.15, "run": 0.2}
+        self.animation_speed = {"idle": 0.23, "walk": 0.23, "run": 0.4}
         self.current_speed = self.animation_speed["idle"]
         
-        # Character animations
-        self.character_idle_right = [pygame.image.load(c.stand_Right[i]) for i in range(8)]
-        self.character_walk_right = [pygame.image.load(c.walk[i]) for i in range(8)]
-        self.character_run_right = [pygame.image.load(c.run[i]) for i in range(8)]
+        # Character animations (pre-scaled to 100x100 for performance)
+        self.sprite_size = (400, 400)  # Reduced sprite size
+        self.character_idle_right = [pygame.transform.scale(pygame.image.load(c.stand_Right[i]), self.sprite_size) for i in range(8)]
+        self.character_walk_right = [pygame.transform.scale(pygame.image.load(c.walk[i]), self.sprite_size) for i in range(8)]
+        self.character_run_right = [pygame.transform.scale(pygame.image.load(c.run[i]), self.sprite_size) for i in range(8)]
         self.character_walk_left = []
         self.character_run_left = []
         self.character_idle_left = []
         
         # Environment assets
         self.road = pygame.image.load("Assets/Terrain/road.png")
-        self.wall = pygame.image.load("Assets/Terrain/wall.png")
+        self.wall = pygame.image.load("Assets/Terrain/wallr.png")
         self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
 
         # Background dimensions
@@ -55,14 +56,23 @@ class PyGame:
         self.building_scroll = 0
         self.road_scroll = 0
         self.wall_scroll = 0
+        self.free_mode_offset = 0  # Offset for background in free movement mode
         
         # Player's world position
-        self.world_x = self.x
-        self.screen_x = self.WIDTH // 2 - 50  # Center player horizontally
-        
-        # Fullscreen tracking
+        self.player_width = 400  # Match sprite size
+        self.world_x = 500  # Start centered in scrolling mode
+        self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 500 - 50 = 450
+
+        # Fullscreen and enemy tracking
         self.fullscreen = False
-    
+        self.enemy_exists = False
+        self.last_tab_state = False  # For TAB key press detection
+
+        # Scroll transition for smooth toggling
+        self.scroll_transition_frames = 1 # Transition over 10 frames
+        self.current_transition_frame = 0
+        self.target_road_scroll = 0
+
     def toggle_fullscreen(self):
         self.fullscreen = not self.fullscreen
         if self.fullscreen:
@@ -85,6 +95,12 @@ class PyGame:
             self.velocity_y = 0
             self.is_jumping = False
 
+        # Clamp positions
+        if self.enemy_exists:
+            self.screen_x = max(0, min(self.screen_x, self.WIDTH - self.player_width))
+        else:
+            self.world_x = max(0, min(self.world_x, 10000))  # Larger world size
+
     def char_config(self):
         for i in range(8):
             self.character_walk_left.append(pygame.transform.flip(self.character_walk_right[i], True, False))
@@ -92,63 +108,36 @@ class PyGame:
             self.character_run_left.append(pygame.transform.flip(self.character_run_right[i], True, False))
 
     def draw_background(self, win):
-    # Clear screen
-        win.fill(WHITE)
-        
-        # PARALLAX SCROLLING PARAMETERS
-        layer_properties = [
-            {   # Distant buildings layer (slowest)
-                "images": self.buildings,
-                "scroll": self.building_scroll,
-                "width": self.building_width,
-                "speed": 0.3,  # 30% of player movement speed
-                "y_pos": 0,
-                "scale": 1.0
-            },
-            {   # Wall layer (medium speed)
-                "images": [self.wall],
-                "scroll": self.wall_scroll,
-                "width": self.wall_width,
-                "speed": 0.6,  # 60% of player movement speed
-                "y_pos": 320,
-                "scale": (self.wall_width, 180)  # Maintain your existing wall scale
-            },
-            {   # Road layer (fastest)
-                "images": [self.road],
-                "scroll": self.road_scroll,
-                "width": self.road_width,
-                "speed": 1.0,  # 100% of player movement speed
-                "y_pos": 500,
-                "scale": (self.road_width, 100)  # Maintain your existing road scale
-            }
-        ]
+        # Buildings (farthest layer)
+        building_tiles = math.ceil(self.WIDTH / self.building_width) + 3
+        for i in range(-1, building_tiles):
+            scroll_amount = self.building_scroll % self.building_width
+            pos_x = i * self.building_width - scroll_amount
+            if pos_x < -self.building_width:
+                continue
+            if pos_x > self.WIDTH:
+                continue
+            for b in self.buildings:
+                win.blit(b, (pos_x, 0))
 
-        # DRAW ALL LAYERS
-        for layer in layer_properties:
-            tiles = math.ceil(self.WIDTH / layer["width"]) + 2
-            scroll_offset = layer["scroll"] % layer["width"]
-            
-            for i in range(-1, tiles):
-                pos_x = i * layer["width"] - scroll_offset
-                
-                # Skip off-screen tiles
-                if pos_x < -layer["width"] or pos_x > self.WIDTH:
-                    continue
-                    
-                # Draw each image in the layer
-                for img in layer["images"]:
-                    # Apply scaling if needed
-                    if layer["scale"] != 1.0:
-                        if isinstance(layer["scale"], tuple):
-                            scaled_img = pygame.transform.scale(img, layer["scale"])
-                        else:
-                            scaled_img = pygame.transform.scale(img, 
-                                (int(img.get_width() * layer["scale"]), 
-                                int(img.get_height() * layer["scale"])))
-                    else:
-                        scaled_img = img
-                    
-                    win.blit(scaled_img, (pos_x, layer["y_pos"]))
+        # Wall (middle layer)
+        wall_tiles = math.ceil(self.WIDTH / self.wall_width) + 2
+        for i in range(-1, wall_tiles):
+            scroll_amount = self.wall_scroll % self.wall_width
+            pos_x = i * self.wall_width - scroll_amount
+            if -self.wall_width <= pos_x <= self.WIDTH:
+                wall = pygame.transform.scale(self.wall, (self.wall_width, 180))
+                win.blit(wall, (pos_x, 320))
+
+        # Road (closest layer)
+        road_tiles = math.ceil(self.WIDTH / self.road_width) + 2
+        for i in range(-1, road_tiles):
+            scroll_amount = self.road_scroll % self.road_width
+            pos_x = i * self.road_width - scroll_amount
+            if -self.road_width <= pos_x <= self.WIDTH:
+                road = pygame.transform.scale(self.road, (self.road_width, 100))
+                win.blit(road, (pos_x, 500))
+
     def main(self):
         run = True
         win = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
@@ -179,22 +168,58 @@ class PyGame:
                 move_amount = -(10 if keys[pygame.K_RSHIFT] else self.speed)
                 self.walk_left = True
                 self.walk_right = False
-                self.building_scroll += int(self.speed * 0.3)
-                self.wall_scroll += int(self.speed * 0.6)
-                self.road_scroll -= int(self.speed * 0.2)
             elif keys[pygame.K_RIGHT]:
                 move_amount = 10 if keys[pygame.K_RSHIFT] else self.speed
                 self.walk_right = True
                 self.walk_left = False
-                self.building_scroll -= int(self.speed * 0.3)
-                self.wall_scroll -= int(self.speed * 0.6)
-                self.road_scroll += int(self.speed * 0.2)
 
-            # Update world position and scroll values
-            self.world_x += move_amount
-            self.building_scroll += move_amount * 0.5  # 50% speed
-            self.wall_scroll += move_amount * 0.8     # 80% speed
-            self.road_scroll += move_amount           # 100% speed
+            # Handle TAB toggle
+            current_tab_state = keys[pygame.K_TAB]
+            tab_just_pressed = current_tab_state and not self.last_tab_state
+            self.last_tab_state = current_tab_state
+
+            if tab_just_pressed:
+                print(f"Before toggle: enemy_exists={self.enemy_exists}, world_x={self.world_x}, screen_x={self.screen_x}, road_scroll={self.road_scroll}, free_mode_offset={self.free_mode_offset}")
+                self.enemy_exists = not self.enemy_exists
+                if self.enemy_exists:
+                    # Free movement mode: start with screen_x at center, set offset
+                    self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 450
+                    self.free_mode_offset = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
+                    self.road_scroll = self.free_mode_offset
+                    self.building_scroll = self.free_mode_offset * 0.3
+                    self.wall_scroll = self.free_mode_offset * 0.65
+                else:
+                    # Scrolling mode: fix screen_x at center, use current world_x
+                    self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 450
+                    self.target_road_scroll = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
+                    self.current_transition_frame = 0
+                    self.road_scroll = self.free_mode_offset  # Start from free mode offset
+                    self.building_scroll = self.road_scroll * 0.3
+                    self.wall_scroll = self.road_scroll * 0.65
+                    self.free_mode_offset = 0
+                print(f"After toggle: enemy_exists={self.enemy_exists}, world_x={self.world_x}, screen_x={self.screen_x}, road_scroll={self.road_scroll}, free_mode_offset={self.free_mode_offset}")
+
+            # Update positions based on mode
+            if self.enemy_exists:
+                # Free movement: move screen_x, update world_x
+                self.screen_x += move_amount
+                self.world_x = self.screen_x + self.free_mode_offset
+                self.road_scroll = self.free_mode_offset
+                self.building_scroll = self.free_mode_offset * 0.3
+                self.wall_scroll = self.free_mode_offset * 0.65
+            else:
+                # Scrolling mode: move world_x, scroll background
+                self.world_x += move_amount
+                self.screen_x = self.WIDTH / 2 - self.player_width / 2  # Line responsible for centering: 450
+                # Interpolate scroll if transitioning
+                if self.current_transition_frame < self.scroll_transition_frames:
+                    t = self.current_transition_frame / self.scroll_transition_frames
+                    self.road_scroll = self.road_scroll * (1 - t) + self.target_road_scroll * t
+                    self.current_transition_frame += 1
+                else:
+                    self.road_scroll = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
+                self.building_scroll = self.road_scroll * 0.3
+                self.wall_scroll = self.road_scroll * 0.65
 
             if keys[pygame.K_UP]:
                 self.jump()
@@ -203,17 +228,17 @@ class PyGame:
             win.fill(WHITE)
             self.draw_background(win)
 
-            # Animation
+            # Animation (sprites already pre-scaled)
             if self.value >= 8:
                 self.value = 0
 
-            # Scale character sprites
-            char_idle_right = pygame.transform.scale(self.character_idle_right[int(self.value)], (100, 140))
-            char_idle_left = pygame.transform.scale(self.character_idle_left[int(self.value)], (100, 140))
-            char_walk_right = pygame.transform.scale(self.character_walk_right[int(self.value)], (100, 140))
-            char_walk_left = pygame.transform.scale(self.character_walk_left[int(self.value)], (100, 140))
-            char_run_right = pygame.transform.scale(self.character_run_right[int(self.value)], (100, 140))
-            char_run_left = pygame.transform.scale(self.character_run_left[int(self.value)], (100, 140))
+            # Use pre-scaled sprites
+            char_idle_right = self.character_idle_right[int(self.value)]
+            char_idle_left = self.character_idle_left[int(self.value)]
+            char_walk_right = self.character_walk_right[int(self.value)]
+            char_walk_left = self.character_walk_left[int(self.value)]
+            char_run_right = self.character_run_right[int(self.value)]
+            char_run_left = self.character_run_left[int(self.value)]
 
             # Display animation
             if not keys[pygame.K_LEFT] and not keys[pygame.K_RIGHT]:
