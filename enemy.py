@@ -53,7 +53,7 @@ class Enemy:
 
     def _apply_red_tint(self, sprite):
         red_tint = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
-        red_tint.fill((255, 0, 0, 128))  # Red with 50% opacity
+        red_tint.fill((255, 0, 0))  # Red with 50% opacity
         tinted_sprite = sprite.copy()
         tinted_sprite.blit(red_tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         return tinted_sprite
