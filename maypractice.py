@@ -8,6 +8,8 @@ Clock = pygame.time.Clock()
 
 # Define colors
 WHITE = (220, 221, 220)
+RED = (255, 0, 0)  # For hitbox
+GREEN = (0, 255, 0)  # For enemy center
 
 class PyGame:
     def __init__(self):
@@ -32,7 +34,7 @@ class PyGame:
 
         # Animation handling
         self.value = 0
-        self.animation_speed = {"idle": 0.23, "walk": 0.23, "run": 0.4, "combo": 0.3}
+        self.animation_speed = {"idle": 0.23, "walk": 0.23, "run": 0.4, "combo": 0.15}
         self.current_speed = self.animation_speed["idle"]
         
         # Character animations (pre-scaled to 400x400 for performance)
@@ -76,6 +78,8 @@ class PyGame:
         self.is_comboing = False
         self.combo_value = 0
         self.combo_frame_count = 19  # Total combo frames
+        self.combo_damage = 2  # Damage per hit
+        self.combo_range = 100  # Combo attack range
 
         # Enemies
         self.enemies = [Enemy(world_x) for world_x in range(1000, 10000, 1000)]
@@ -158,7 +162,7 @@ class PyGame:
         for enemy in self.enemies:
             enemy.draw(win, scroll_offset, self.walk_left, self.walk_right)
             enemy_screen_x = enemy.world_x - scroll_offset
-            if -enemy.width <= enemy_screen_x <= self.WIDTH:
+            if -enemy.width <= enemy_screen_x <= win.get_width():
                 visible_enemies += 1
         return visible_enemies
 
@@ -183,6 +187,37 @@ class PyGame:
         # Update enemy movements
         for enemy in self.enemies:
             enemy.update_movement()
+
+    def check_combo_hits(self, win):
+        # Check for combo hits on frames 1, 6, and 16
+        if self.is_comboing:
+            # Adjust hitbox center based on facing direction
+            if self.facing_left:
+                hitbox_center = self.world_x + self.player_width / 2 - 200  # Shift left
+            else:
+                hitbox_center = self.world_x + self.player_width / 2 + 200  # Shift right
+            hitbox_left = hitbox_center - self.combo_range / 2
+            hitbox_right = hitbox_center + self.combo_range / 2
+            
+            # Draw the hitbox (red rectangle) during combo
+            hitbox_screen_left = hitbox_left - (self.free_mode_offset if self.enemy_exists else self.road_scroll)
+            hitbox_screen_right = hitbox_right - (self.free_mode_offset if self.enemy_exists else self.road_scroll)
+            pygame.draw.rect(win, RED, (hitbox_screen_left, self.y + 150, self.combo_range, 100), 2)  # Draw hitbox
+            
+            # Check collisions with enemies
+            for enemy in self.enemies[:]:  # Copy list to allow removal
+                enemy_center = enemy.world_x + enemy.width / 2
+                enemy_screen_center = enemy_center - (self.free_mode_offset if self.enemy_exists else self.road_scroll)
+                # Draw enemy center (green dot)
+                pygame.draw.circle(win, GREEN, (int(enemy_screen_center), self.y + 200), 5)
+                
+                # Apply damage on frames 1, 6, 16
+                if int(self.combo_value) in [1, 6, 16]:
+                    distance = abs(enemy_center - hitbox_center)
+                    if hitbox_left <= enemy_center <= hitbox_right:
+                        enemy.take_damage(self.combo_damage)
+                        if enemy.health <= 0:
+                            self.enemies.remove(enemy)
 
     def main(self):
         run = True
@@ -271,14 +306,15 @@ class PyGame:
             if keys[pygame.K_UP]:
                 self.jump()
 
-            # Update animations and movements
+            # Update animations and check for hits
             self.update_animations()
-            self.update_enemies()
+            self.update_enemies()  # Update movement before checking hits
 
             # Drawing
             win.fill(WHITE)
             self.draw_background(win)
             visible_enemies = self.draw_enemies(win)
+            self.check_combo_hits(win)  # Pass win to draw hitbox and enemy center
 
             # Use pre-scaled sprites
             char_idle_right = self.character_idle_right[int(self.value)]
@@ -301,8 +337,13 @@ class PyGame:
                 win.blit(char_walk_left if self.walk_left else char_walk_right, (self.screen_x, self.y))
 
             self.update(dt)
-            pygame.display.update()
-            
+            if self.enemies:
+                pass
+            else:
+                pass
+
+            pygame.display.flip()
+
         pygame.quit()
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ class Enemy:
         self.height = 400
         self.y = 250
         self.sprite_size = (self.width, self.height)
+        self.health = 50  # Enemy health
 
         # Load enemy sprites (same as player)
         self.idle_right = [pygame.image.load(c.stand_Right[i]) for i in range(8)]
@@ -30,6 +31,11 @@ class Enemy:
         self.speed = 2  # Movement speed (units per frame)
         self.direction = 1  # 1 for right, -1 for left
         self.patrol_range = 100  # Half the patrol range
+
+        # Stun state
+        self.stunned = False
+        self.stun_duration = 300  # 5 seconds at 60 FPS
+        self.stun_timer = 0
 
     def _scale_and_tint_sprites(self):
         # Scale all sprites to 400x400
@@ -58,12 +64,34 @@ class Enemy:
         tinted_sprite.blit(red_tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         return tinted_sprite
 
+    def take_damage(self, damage):
+        self.health -= damage
+        if self.health < 0:
+            self.health = 0
+        self.stun()
+
+    def stun(self):
+        if not self.stunned:  # Only set stunned if not already stunned
+            self.stunned = True
+            self.stun_timer = self.stun_duration
+        self.moving = False  # Always stop movement
+
     def update_animation(self):
+        if self.stunned:
+            self.stun_timer -= 1
+            print(f"Stun timer: {self.stun_timer}, Stunned: {self.stunned}")  # Debug
+            if self.stun_timer <= 0:
+                self.stunned = False
+                print(f"Stun ended, Stunned: {self.stunned}")  # Debug
+            return
         self.value += self.current_speed
         if self.value >= 8:
             self.value -= 8
 
     def update_movement(self):
+        if self.stunned:
+            return  # Skip movement while stunned
+
         # Patrol within range (initial_x - patrol_range to initial_x + patrol_range)
         min_x = self.initial_x - self.patrol_range
         max_x = self.initial_x + self.patrol_range
@@ -96,8 +124,8 @@ class Enemy:
 
             # Select sprite based on movement state
             frame = int(self.value)
-            if self.moving:
-                self.current_sprite = self.walk_left[frame] if self.facing_left else self.walk_right[frame]
-            else:
+            if self.stunned or not self.moving:
                 self.current_sprite = self.idle_left[frame] if self.facing_left else self.idle_right[frame]
+            else:
+                self.current_sprite = self.walk_left[frame] if self.facing_left else self.walk_right[frame]
             win.blit(self.current_sprite, (enemy_screen_x, self.y))
