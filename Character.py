@@ -91,24 +91,16 @@ combo = [combo1, combo2, combo3, combo4, combo5, combo6, combo7, combo8, combo9,
 
 
 
-# ================================================================
 
-'''
-        ///--- This is the bamboo svg file path ---///
-'''
 
-path_fighter_bamboo = os.path.join('Assets', 'fighter_bash_idle')
+path_fighter_hit = os.path.join('Assets', 'fighter_hit')
 
-bamboo1 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_1.svg')
-bamboo2 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_2.svg')
-bamboo3 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_3.svg')
-bamboo4 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_4.svg')
-bamboo5 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_5.svg')
-bamboo6 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_6.svg')
-bamboo7 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_7.svg')
-bamboo8 = os.path.join(path_fighter_bamboo, 'fighter_bash_idle_8.svg')
+hit1 = os.path.join(path_fighter_hit, "fighter_hit_1.png")
+hit2 = os.path.join(path_fighter_hit, "fighter_hit_2.png")
+hit3 = os.path.join(path_fighter_hit, "fighter_hit_3.png")
+hit4 = os.path.join(path_fighter_hit, "fighter_hit_4.png")
 
-bamboo = [bamboo1, bamboo2, bamboo3, bamboo4,
-          bamboo5, bamboo6, bamboo7, bamboo8]
+
+hit = [hit1, hit2, hit3, hit4]
 
 # =============================================================================

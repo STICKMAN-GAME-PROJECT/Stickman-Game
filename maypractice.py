@@ -193,9 +193,9 @@ class PyGame:
         if self.is_comboing:
             # Adjust hitbox center based on facing direction
             if self.facing_left:
-                hitbox_center = self.world_x + self.player_width / 2 - 200  # Shift left
+                hitbox_center = self.world_x + self.player_width / 2 - 50  # Shift left
             else:
-                hitbox_center = self.world_x + self.player_width / 2 + 200  # Shift right
+                hitbox_center = self.world_x + self.player_width / 2 + 50  # Shift right
             hitbox_left = hitbox_center - self.combo_range / 2
             hitbox_right = hitbox_center + self.combo_range / 2
             
