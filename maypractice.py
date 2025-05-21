@@ -35,7 +35,7 @@ class PyGame:
 
         # Animation handling
         self.value = 0
-        self.animation_speed = {"idle": 0.25, "walk": 0.3, "run": 0.4, "combo": 0.3, "hit": 0.15}
+        self.animation_speed = {"idle": 0.25, "walk": 0.3, "run": 0.4, "combo": 0.3, "hit": 0.3}
         self.current_speed = self.animation_speed["idle"]
         
         # Character animations (pre-scaled to 400x400 for performance)
@@ -188,10 +188,8 @@ class PyGame:
             enemy.check_attack_hit(self.world_x, self)  # Check for hits on player
             if enemy.world_x < 0:
                 enemy.world_x += 10000
-                print(f"Enemy wrapped around from left: {previous_x} to {enemy.world_x}")
             elif enemy.world_x > 10000:
                 enemy.world_x -= 10000
-                print(f"Enemy wrapped around from right: {previous_x} to {enemy.world_x}")
             enemy.update_animation()
             enemy.draw(win, scroll_offset)
             enemy_screen_x = enemy.world_x - scroll_offset
