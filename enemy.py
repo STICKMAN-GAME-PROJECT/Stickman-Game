@@ -2,130 +2,148 @@ import pygame
 import Character as c
 
 class Enemy:
-    def __init__(self, world_x):
-        self.initial_x = world_x  # Store initial position as patrol center
-        self.world_x = world_x  # Enemy's current position in the world
+    def __init__(self, world_x, player_world_x=500, idle_right=None, walk_right=None, run_right=None):
+        self.world_x = world_x
         self.width = 400
         self.height = 400
-        self.y = 250
-        self.sprite_size = (self.width, self.height)
-        self.health = 50  # Enemy health
-
-        # Load enemy sprites (same as player)
-        self.idle_right = [pygame.image.load(c.stand_Right[i]) for i in range(8)]
-        self.walk_right = [pygame.image.load(c.walk[i]) for i in range(8)]
-        self.run_right = [pygame.image.load(c.run[i]) for i in range(8)]
-        self.idle_left = []
-        self.walk_left = []
-        self.run_left = []
-
-        # Scale and tint sprites
-        self._scale_and_tint_sprites()
-
-        # Animation and movement state
-        self.value = 0
-        self.current_speed = 0.23  # Animation speed
-        self.facing_right = True  # Direction flag (not sprite list)
-        self.facing_left = False  # Direction flag
-        self.moving = False  # Track if enemy is moving
-        self.speed = 2  # Movement speed (units per frame)
-        self.direction = 1  # 1 for right, -1 for left
-        self.patrol_range = 100  # Half the patrol range
-
-        # Stun state
+        self.health = 50
         self.stunned = False
         self.stun_duration = 300  # 5 seconds at 60 FPS
         self.stun_timer = 0
+        self.speed = 2
+        self.facing_left = world_x > player_world_x  # Face player initially
+        self.value = 0  # For idle/walk animation
+        self.current_speed = 0.23  # Default to walk speed
+        self.animation_speed = {"idle": 0.23, "walk": 0.23, "hit": 0.15}
+        self.initial_x = world_x  # Store initial position for patrol
+        self.patrol_range = 500  # Half of 1000-unit patrol range
+        self.direction = 1 if not self.facing_left else -1  # Start moving toward initial direction
+        self.minimum_distance = 100  # Stop 50 units away from player
+        self.patrol_at_distance_range = 25  # Patrol ±25 units when at minimum distance
+        self.at_minimum_distance = False  # Track if enemy is at minimum distance
+        self.patrol_center = None  # Center point for patrolling when at minimum distance
 
-    def _scale_and_tint_sprites(self):
-        # Scale all sprites to 400x400
-        self.idle_right = [pygame.transform.scale(sprite, self.sprite_size) for sprite in self.idle_right]
-        self.walk_right = [pygame.transform.scale(sprite, self.sprite_size) for sprite in self.walk_right]
-        self.run_right = [pygame.transform.scale(sprite, self.sprite_size) for sprite in self.run_right]
+        # Load and scale hit animation
+        self.sprite_size = (400, 400)
+        self.hit_right = [pygame.transform.scale(pygame.image.load(c.hit[i]), self.sprite_size) for i in range(4)]
+        self.hit_left = [pygame.transform.flip(self.hit_right[i], True, False) for i in range(4)]
 
-        # Create left-facing sprites
-        for i in range(8):
-            self.idle_left.append(pygame.transform.flip(self.idle_right[i], True, False))
-            self.walk_left.append(pygame.transform.flip(self.walk_right[i], True, False))
-            self.run_left.append(pygame.transform.flip(self.run_right[i], True, False))
+        # Use passed player animations directly (no tinting)
+        self.idle_right = idle_right or []
+        self.walk_right = walk_right or []
+        self.idle_left = [pygame.transform.flip(self.idle_right[i], True, False) for i in range(8)]
+        self.walk_left = [pygame.transform.flip(self.walk_right[i], True, False) for i in range(8)]
 
-        # Apply red tint to all sprites
-        self.idle_right = [self._apply_red_tint(sprite) for sprite in self.idle_right]
-        self.idle_left = [self._apply_red_tint(sprite) for sprite in self.idle_left]
-        self.walk_right = [self._apply_red_tint(sprite) for sprite in self.walk_right]
-        self.walk_left = [self._apply_red_tint(sprite) for sprite in self.walk_left]
-        self.run_right = [self._apply_red_tint(sprite) for sprite in self.run_right]
-        self.run_left = [self._apply_red_tint(sprite) for sprite in self.run_left]
-
-    def _apply_red_tint(self, sprite):
-        red_tint = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
-        red_tint.fill((255, 0, 0))  # Red with 50% opacity
-        tinted_sprite = sprite.copy()
-        tinted_sprite.blit(red_tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-        return tinted_sprite
+        self.is_hitting = False
+        self.hit_value = 0
+        self.hit_duration = 4  # Match 4-frame hit animation
 
     def take_damage(self, damage):
-        self.health -= damage
-        if self.health < 0:
-            self.health = 0
-        self.stun()
-
-    def stun(self):
-        if not self.stunned:  # Only set stunned if not already stunned
-            self.stunned = True
-            self.stun_timer = self.stun_duration
-        self.moving = False  # Always stop movement
+        if self.health > 0:  # Only trigger hit if alive
+            self.health -= damage
+            if not self.is_hitting:  # Start hit animation only if not already playing
+                self.is_hitting = True
+                self.hit_value = 0
+            if self.health <= 0:
+                self.health = 0
+                self.stunned = False  # No stun after death
+            else:
+                self.stunned = True  # Stun on hit if still alive
+                self.stun_timer = self.stun_duration
 
     def update_animation(self):
-        if self.stunned:
+        if self.is_hitting:
+            self.hit_value += self.animation_speed["hit"]
+            if self.hit_value >= self.hit_duration:
+                self.hit_value = 0
+                self.is_hitting = False
+        else:
+            self.value += self.current_speed
+            if self.value >= 8:  # Loop idle/walk animation
+                self.value -= 8
+
+    def update_movement(self, player_world_x):
+        if not self.stunned and self.health > 0:
+            # Calculate distance to player
+            distance_to_player = abs(player_world_x - self.world_x)
+            print(f"Enemy at world_x: {self.world_x}, Direction: {self.direction}, Distance to player: {distance_to_player}, Animation speed: {self.current_speed}")
+
+            if distance_to_player > 500:  # Patrol if player is far
+                print(f"Patrolling: Initial x: {self.initial_x}, Patrol range: {self.initial_x - self.patrol_range} to {self.initial_x + self.patrol_range}")
+                self.at_minimum_distance = False  # Reset when far from player
+                self.patrol_center = None
+                # Update position
+                self.world_x += self.speed * self.direction
+                # Immediately enforce patrol boundaries
+                if self.world_x >= self.initial_x + self.patrol_range:
+                    print(f"Hit max range at world_x: {self.world_x}, clamping to {self.initial_x + self.patrol_range}")
+                    self.world_x = self.initial_x + self.patrol_range  # Clamp at max
+                    self.direction = -1  # Turn left
+                    self.facing_left = True
+                    print("Turning left at max range")
+                elif self.world_x <= self.initial_x - self.patrol_range:
+                    print(f"Hit min range at world_x: {self.world_x}, clamping to {self.initial_x - self.patrol_range}")
+                    self.world_x = self.initial_x - self.patrol_range  # Clamp at min
+                    self.direction = 1  # Turn right
+                    self.facing_left = False
+                    print("Turning right at min range")
+                self.current_speed = self.animation_speed["walk"]  # Walk during patrol
+            else:  # Engage player if within 500 units
+                print("Engaging player")
+                # Determine target position to stop at minimum distance
+                if player_world_x < self.world_x:
+                    target_x = player_world_x + self.minimum_distance  # Stop to the right of player
+                    self.facing_left = True
+                else:
+                    target_x = player_world_x - self.minimum_distance  # Stop to the left of player
+                    self.facing_left = False
+
+                # Check if enemy is within minimum distance
+                if abs(self.world_x - player_world_x) <= self.minimum_distance:
+                    self.at_minimum_distance = True
+                    self.patrol_center = target_x  # Set patrol center at the stopping point
+                else:
+                    self.at_minimum_distance = False
+
+                if not self.at_minimum_distance:
+                    # Move toward the target position
+                    if self.world_x > target_x:
+                        self.world_x -= self.speed  # Move left toward target
+                        self.direction = -1
+                        print("Moving left toward player")
+                    else:
+                        self.world_x += self.speed  # Move right toward target
+                        self.direction = 1
+                        print("Moving right toward player")
+                    self.current_speed = self.animation_speed["walk"]
+                else:
+                    # Patrol left to right around the patrol center
+                    print(f"Patrolling at minimum distance around x: {self.patrol_center}")
+                    self.world_x += self.speed * self.direction
+                    if self.world_x >= self.patrol_center + self.patrol_at_distance_range:
+                        self.world_x = self.patrol_center + self.patrol_at_distance_range
+                        self.direction = -1
+                        print("Turning left at patrol max")
+                    elif self.world_x <= self.patrol_center - self.patrol_at_distance_range:
+                        self.world_x = self.patrol_center - self.patrol_at_distance_range
+                        self.direction = 1
+                        print("Turning right at patrol min")
+                    self.current_speed = self.animation_speed["walk"]
+        if self.stunned and self.health > 0:
             self.stun_timer -= 1
-            print(f"Stun timer: {self.stun_timer}, Stunned: {self.stunned}")  # Debug
             if self.stun_timer <= 0:
                 self.stunned = False
-                print(f"Stun ended, Stunned: {self.stunned}")  # Debug
-            return
-        self.value += self.current_speed
-        if self.value >= 8:
-            self.value -= 8
 
-    def update_movement(self):
-        if self.stunned:
-            return  # Skip movement while stunned
-
-        # Patrol within range (initial_x - patrol_range to initial_x + patrol_range)
-        min_x = self.initial_x - self.patrol_range
-        max_x = self.initial_x + self.patrol_range
-
-        self.world_x += self.speed * self.direction
-        if self.world_x <= min_x or self.world_x >= max_x:
-            self.direction *= -1  # Reverse direction
-            self.world_x = max(min_x, min(max_x, self.world_x))  # Clamp position
-
-        # Update moving state and facing
-        self.moving = abs(self.world_x - self.initial_x) > 1  # Consider moving if outside a small threshold
-        if self.direction == 1:
-            self.facing_right = True
-            self.facing_left = False
-        else:
-            self.facing_left = True
-            self.facing_right = False
-
-    def draw(self, win, scroll_offset, player_walk_left, player_walk_right):
-        # Calculate enemy's screen position
+    def draw(self, win, scroll_offset):
         enemy_screen_x = self.world_x - scroll_offset
-        if -self.width <= enemy_screen_x <= win.get_width():
-            # Set facing direction based on patrol direction only
-            if self.direction == 1:
-                self.facing_right = True
-                self.facing_left = False
+        if -self.width <= enemy_screen_x <= win.get_width():  # Only draw if visible
+            if self.is_hitting:
+                hit_sprite = self.hit_left[int(self.hit_value)] if self.facing_left else self.hit_right[int(self.hit_value)]
+                win.blit(hit_sprite, (enemy_screen_x, 250))  # Adjust y-position as needed
             else:
-                self.facing_left = True
-                self.facing_right = False
-
-            # Select sprite based on movement state
-            frame = int(self.value)
-            if self.stunned or not self.moving:
-                self.current_sprite = self.idle_left[frame] if self.facing_left else self.idle_right[frame]
-            else:
-                self.current_sprite = self.walk_left[frame] if self.facing_left else self.walk_right[frame]
-            win.blit(self.current_sprite, (enemy_screen_x, self.y))
+                if self.current_speed == self.animation_speed["walk"]:
+                    sprite = self.walk_left[int(self.value)] if self.facing_left else self.walk_right[int(self.value)]
+                else:  # idle
+                    sprite = self.idle_left[int(self.value)] if self.facing_left else self.idle_right[int(self.value)]
+                if sprite:  # Ensure sprite exists before blitting
+                    win.blit(sprite, (enemy_screen_x, 250))  # Adjust y-position as needed

@@ -47,7 +47,7 @@ class PyGame:
         self.character_run_left = []
         self.character_idle_left = []
         self.character_combo_left = []
-        
+
         # Environment assets
         self.road = pygame.image.load("Assets/Terrain/road.png")
         self.wall = pygame.image.load("Assets/Terrain/wallr.png")
@@ -82,7 +82,7 @@ class PyGame:
         self.combo_range = 100  # Combo attack range
 
         # Enemies
-        self.enemies = [Enemy(world_x) for world_x in range(1000, 10000, 1000)]
+        self.enemies = [Enemy(world_x, self.world_x, self.character_idle_right, self.character_walk_right, self.character_run_right) for world_x in range(1000, 10000, 1000)]
 
         # Scroll transition for smooth toggling
         self.scroll_transition_frames = 10
@@ -160,7 +160,16 @@ class PyGame:
         visible_enemies = 0
         scroll_offset = self.free_mode_offset if self.enemy_exists else self.road_scroll
         for enemy in self.enemies:
-            enemy.draw(win, scroll_offset, self.walk_left, self.walk_right)
+            previous_x = enemy.world_x
+            enemy.update_movement(self.world_x)
+            if enemy.world_x < 0:
+                enemy.world_x += 10000
+                print(f"Enemy wrapped around from left: {previous_x} to {enemy.world_x}")
+            elif enemy.world_x > 10000:
+                enemy.world_x -= 10000
+                print(f"Enemy wrapped around from right: {previous_x} to {enemy.world_x}")
+            enemy.update_animation()
+            enemy.draw(win, scroll_offset)
             enemy_screen_x = enemy.world_x - scroll_offset
             if -enemy.width <= enemy_screen_x <= win.get_width():
                 visible_enemies += 1
@@ -179,36 +188,26 @@ class PyGame:
             if self.value >= 8:
                 self.value -= 8
 
-        # Update enemy animations
-        for enemy in self.enemies:
-            enemy.update_animation()
-
     def update_enemies(self):
-        # Update enemy movements
-        for enemy in self.enemies:
-            enemy.update_movement()
+        # Update enemy movements (handled in draw_enemies now)
+        pass
 
     def check_combo_hits(self, win):
         # Check for combo hits on frames 1, 6, and 16
         if self.is_comboing:
             # Adjust hitbox center based on facing direction
             if self.facing_left:
-                hitbox_center = self.world_x + self.player_width / 2 - 50  # Shift left
+                hitbox_center = self.world_x + self.player_width / 2 - 200  # Shift left
             else:
-                hitbox_center = self.world_x + self.player_width / 2 + 50  # Shift right
+                hitbox_center = self.world_x + self.player_width / 2 + 200  # Shift right
             hitbox_left = hitbox_center - self.combo_range / 2
             hitbox_right = hitbox_center + self.combo_range / 2
             
-            # Draw the hitbox (red rectangle) during combo
-            hitbox_screen_left = hitbox_left - (self.free_mode_offset if self.enemy_exists else self.road_scroll)
-            hitbox_screen_right = hitbox_right - (self.free_mode_offset if self.enemy_exists else self.road_scroll)
-            pygame.draw.rect(win, RED, (hitbox_screen_left, self.y + 150, self.combo_range, 100), 2)  # Draw hitbox
-            
-            # Check collisions with enemies
+            # Check collisions with enemies (no red hitbox drawn)
             for enemy in self.enemies[:]:  # Copy list to allow removal
                 enemy_center = enemy.world_x + enemy.width / 2
                 enemy_screen_center = enemy_center - (self.free_mode_offset if self.enemy_exists else self.road_scroll)
-                # Draw enemy center (green dot)
+                # Draw enemy center (green dot) for debugging
                 pygame.draw.circle(win, GREEN, (int(enemy_screen_center), self.y + 200), 5)
                 
                 # Apply damage on frames 1, 6, 16
@@ -308,13 +307,13 @@ class PyGame:
 
             # Update animations and check for hits
             self.update_animations()
-            self.update_enemies()  # Update movement before checking hits
+            self.update_enemies()  # Update movement before checking hits (now a no-op)
 
             # Drawing
             win.fill(WHITE)
             self.draw_background(win)
             visible_enemies = self.draw_enemies(win)
-            self.check_combo_hits(win)  # Pass win to draw hitbox and enemy center
+            self.check_combo_hits(win)  # Pass win to check hits
 
             # Use pre-scaled sprites
             char_idle_right = self.character_idle_right[int(self.value)]
