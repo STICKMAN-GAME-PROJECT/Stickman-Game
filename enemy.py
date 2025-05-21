@@ -14,7 +14,7 @@ class Enemy:
         self.facing_left = world_x > player_world_x  # Face player initially
         self.value = 0  # For idle/walk animation
         self.current_speed = 0.23  # Default to walk speed
-        self.animation_speed = {"idle": 0.23, "walk": 0.23, "fight": 0.15, "hit": 0.15}
+        self.animation_speed = {"idle": 0.23, "walk": 0.23, "fight": 0.15, "hit": 0.3}
         self.initial_x = world_x  # Store initial position for patrol
         self.patrol_range = 100  # Half of 200-unit patrol range (±100 units)
         self.direction = 1 if not self.facing_left else -1  # Start moving toward initial direction

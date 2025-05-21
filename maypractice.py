@@ -35,7 +35,7 @@ class PyGame:
 
         # Animation handling
         self.value = 0
-        self.animation_speed = {"idle": 0.23, "walk": 0.23, "run": 0.4, "combo": 0.15}
+        self.animation_speed = {"idle": 0.25, "walk": 0.3, "run": 0.4, "combo": 0.3}
         self.current_speed = self.animation_speed["idle"]
         
         # Character animations (pre-scaled to 400x400 for performance)
