@@ -16,9 +16,9 @@ class Enemy:
         self.current_speed = 0.23  # Default to walk speed
         self.animation_speed = {"idle": 0.23, "walk": 0.23, "fight": 0.15, "hit": 0.15}
         self.initial_x = world_x  # Store initial position for patrol
-        self.patrol_range = 100  # Half of 1000-unit patrol range
+        self.patrol_range = 100  # Half of 200-unit patrol range (±100 units)
         self.direction = 1 if not self.facing_left else -1  # Start moving toward initial direction
-        self.minimum_distance = 100  # Stop 50 units away from player
+        self.minimum_distance = 100  # Stop 100 units away from player
         self.patrol_at_distance_range = 25  # Patrol ±25 units when at minimum distance
         self.at_minimum_distance = False  # Track if enemy is at minimum distance
         self.patrol_center = None  # Center point for patrolling when at minimum distance
@@ -32,6 +32,8 @@ class Enemy:
         self.attack_timer = 0  # Timer to manage attack frequency
         self.attack_damage = 2  # Match player's combo damage
         self.attack_range = 100  # Match player's combo range
+        self.combo_delay = 60  # 1 second delay before starting combo (at 60 FPS)
+        self.combo_delay_timer = 0  # Timer for delay
 
         # Load and scale player's fight combo animation
         self.sprite_size = (400, 400)
@@ -104,16 +106,22 @@ class Enemy:
             distance_to_player = abs(player_world_x - self.world_x)
             print(f"Enemy at world_x: {self.world_x}, Direction: {self.direction}, Distance to player: {distance_to_player}, Animation speed: {self.current_speed}")
 
-            # Manage attack cooldown
+            # Manage attack cooldown and delay
             if self.attack_timer > 0:
                 self.attack_timer -= 1
+                print(f"Attack timer: {self.attack_timer}")
+            if self.combo_delay_timer > 0:
+                self.combo_delay_timer -= 1
+                print(f"Combo delay timer: {self.combo_delay_timer}")
 
-            if distance_to_player > 500:  # Patrol if player is far
+            if distance_to_player > 200:  # Patrol if player is farther than 200 units
                 print(f"Patrolling: Initial x: {self.initial_x}, Patrol range: {self.initial_x - self.patrol_range} to {self.initial_x + self.patrol_range}")
                 self.at_minimum_distance = False  # Reset when far from player
                 self.patrol_center = None
+                self.combo_delay_timer = 0  # Reset delay when moving away
                 # Update position
                 self.world_x += self.speed * self.direction
+                print(f"Updated world_x: {self.world_x} (Patrolling)")
                 # Immediately enforce patrol boundaries
                 if self.world_x >= self.initial_x + self.patrol_range:
                     print(f"Hit max range at world_x: {self.world_x}, clamping to {self.initial_x + self.patrol_range}")
@@ -128,8 +136,8 @@ class Enemy:
                     self.facing_left = False
                     print("Turning right at min range")
                 self.current_speed = self.animation_speed["walk"]  # Walk during patrol
-            else:  # Engage player if within 500 units
-                print("Engaging player")
+            else:  # Follow player if within 200 units
+                print("Following player")
                 # Determine target position to stop at minimum distance
                 if player_world_x < self.world_x:
                     target_x = player_world_x + self.minimum_distance  # Stop to the right of player
@@ -140,10 +148,14 @@ class Enemy:
 
                 # Check if enemy is within minimum distance
                 if abs(self.world_x - player_world_x) <= self.minimum_distance:
-                    self.at_minimum_distance = True
-                    self.patrol_center = target_x  # Set patrol center at the stopping point
+                    if not self.at_minimum_distance:  # Only set to True if it wasn't already True
+                        self.at_minimum_distance = True
+                        self.patrol_center = target_x  # Set patrol center at the stopping point
+                        self.combo_delay_timer = self.combo_delay  # Start delay only when first entering range
+                        print(f"Starting combo delay: {self.combo_delay_timer} frames remaining")
                 else:
                     self.at_minimum_distance = False
+                    self.combo_delay_timer = 0  # Reset delay if moving out of range
 
                 if not self.at_minimum_distance:
                     # Move toward the target position
@@ -157,12 +169,13 @@ class Enemy:
                         print("Moving right toward player")
                     self.current_speed = self.animation_speed["walk"]
                 else:
-                    # Attack the player instead of patrolling
-                    if not self.is_fighting and self.attack_timer == 0:
+                    # Attack the player after delay
+                    if not self.is_fighting and self.attack_timer == 0 and self.combo_delay_timer == 0:
                         self.is_fighting = True
                         self.fight_value = 0
                         self.attack_timer = self.attack_cooldown
-                    self.current_speed = self.animation_speed["idle"]  # Idle while attacking
+                        print("Combo started after delay")
+                    self.current_speed = self.animation_speed["idle"]  # Idle while waiting or attacking
 
         if self.stunned and self.health > 0:
             self.stun_timer -= 1
