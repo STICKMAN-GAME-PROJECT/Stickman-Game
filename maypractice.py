@@ -35,7 +35,7 @@ class PyGame:
 
         # Animation handling
         self.value = 0
-        self.animation_speed = {"idle": 0.25, "walk": 0.3, "run": 0.4, "combo": 0.3}
+        self.animation_speed = {"idle": 0.25, "walk": 0.3, "run": 0.4, "combo": 0.3, "hit": 0.15}
         self.current_speed = self.animation_speed["idle"]
         
         # Character animations (pre-scaled to 400x400 for performance)
@@ -44,10 +44,17 @@ class PyGame:
         self.character_walk_right = [pygame.transform.scale(pygame.image.load(c.walk[i]), self.sprite_size) for i in range(8)]
         self.character_run_right = [pygame.transform.scale(pygame.image.load(c.run[i]), self.sprite_size) for i in range(8)]
         self.character_combo_right = [pygame.transform.scale(pygame.image.load(c.combo[i]), self.sprite_size) for i in range(19)]
+        self.character_hit_right = [pygame.transform.scale(pygame.image.load(c.hit[i]), self.sprite_size) for i in range(4)]  # Load hit animation
         self.character_walk_left = []
         self.character_run_left = []
         self.character_idle_left = []
         self.character_combo_left = []
+        self.character_hit_left = []
+
+        # Hit animation state
+        self.is_hit = False
+        self.hit_value = 0
+        self.hit_frame_count = 4  # Total hit animation frames (matches enemy)
 
         # Environment assets
         self.road = pygame.image.load("Assets/Terrain/road.png")
@@ -91,20 +98,24 @@ class PyGame:
         self.target_road_scroll = 0
 
     def take_damage(self, damage):
-        self.health -= damage
-        print(f"Player takes {damage} damage! Health: {self.health}")
-        if self.health <= 0:
-            print("Player defeated!")
-            # Handle player death (e.g., game over)
-            pygame.quit()
-            exit()
+        if self.health > 0:  # Only take damage if alive
+            self.health -= damage
+            print(f"Player takes {damage} damage! Health: {self.health}")
+            # Trigger hit animation if not already playing
+            if not self.is_hit and not self.is_comboing:  # Don't interrupt combo
+                self.is_hit = True
+                self.hit_value = 0
+            if self.health <= 0:
+                print("Player defeated!")
+                pygame.quit()
+                exit()
 
     def toggle_fullscreen(self):
         self.fullscreen = not self.fullscreen
         if self.fullscreen:
             pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         else:
-            pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+            pygame.display.set_mode((self.WIDTH, self.WIDTH))
 
     def jump(self):
         if not self.is_jumping:
@@ -134,6 +145,8 @@ class PyGame:
             self.character_run_left.append(pygame.transform.flip(self.character_run_right[i], True, False))
         for i in range(19):
             self.character_combo_left.append(pygame.transform.flip(self.character_combo_right[i], True, False))
+        for i in range(4):
+            self.character_hit_left.append(pygame.transform.flip(self.character_hit_right[i], True, False))
 
     def draw_background(self, win):
         # Buildings (farthest layer)
@@ -188,7 +201,13 @@ class PyGame:
 
     def update_animations(self):
         # Update player animation
-        if self.is_comboing:
+        if self.is_hit:
+            self.hit_value += self.animation_speed["hit"]
+            if self.hit_value >= self.hit_frame_count:
+                self.hit_value = 0
+                self.is_hit = False
+                self.current_speed = self.animation_speed["idle"]
+        elif self.is_comboing:
             self.combo_value += self.animation_speed["combo"]
             if self.combo_value >= self.combo_frame_count:
                 self.combo_value = 0
@@ -242,7 +261,7 @@ class PyGame:
                     run = False
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                     self.toggle_fullscreen()
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and self.draw_enemies(win) > 0 and not self.is_comboing:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and self.draw_enemies(win) > 0 and not self.is_comboing and not self.is_hit:
                     self.is_comboing = True
                     self.current_speed = self.animation_speed["combo"]
 
@@ -335,9 +354,13 @@ class PyGame:
             char_run_left = self.character_run_left[int(self.value)]
             char_combo_right = self.character_combo_right[int(self.combo_value)] if self.is_comboing else None
             char_combo_left = self.character_combo_left[int(self.combo_value)] if self.is_comboing else None
+            char_hit_right = self.character_hit_right[int(self.hit_value)] if self.is_hit else None
+            char_hit_left = self.character_hit_left[int(self.hit_value)] if self.is_hit else None
 
             # Display animation
-            if self.is_comboing:
+            if self.is_hit:
+                win.blit(char_hit_left if self.facing_left else char_hit_right, (self.screen_x, self.y))
+            elif self.is_comboing:
                 win.blit(char_combo_left if self.facing_left else char_combo_right, (self.screen_x, self.y))
             elif not keys[pygame.K_LEFT] and not keys[pygame.K_RIGHT]:
                 win.blit(char_idle_left if self.facing_left else char_idle_right, (self.screen_x, self.y))
