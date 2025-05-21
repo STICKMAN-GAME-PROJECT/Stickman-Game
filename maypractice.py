@@ -19,6 +19,7 @@ class PyGame:
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
+        self.health = 100  # Player health
 
         # Jumping mechanics
         self.is_jumping = False
@@ -88,6 +89,15 @@ class PyGame:
         self.scroll_transition_frames = 10
         self.current_transition_frame = 0
         self.target_road_scroll = 0
+
+    def take_damage(self, damage):
+        self.health -= damage
+        print(f"Player takes {damage} damage! Health: {self.health}")
+        if self.health <= 0:
+            print("Player defeated!")
+            # Handle player death (e.g., game over)
+            pygame.quit()
+            exit()
 
     def toggle_fullscreen(self):
         self.fullscreen = not self.fullscreen
@@ -161,7 +171,8 @@ class PyGame:
         scroll_offset = self.free_mode_offset if self.enemy_exists else self.road_scroll
         for enemy in self.enemies:
             previous_x = enemy.world_x
-            enemy.update_movement(self.world_x)
+            enemy.update_movement(self.world_x, self)  # Pass self as the player
+            enemy.check_attack_hit(self.world_x, self)  # Check for hits on player
             if enemy.world_x < 0:
                 enemy.world_x += 10000
                 print(f"Enemy wrapped around from left: {previous_x} to {enemy.world_x}")
