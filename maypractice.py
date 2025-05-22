@@ -24,6 +24,7 @@ class PyGame:
 
         # Wave system
         self.current_wave = 0  # Start at wave 0 (will increment to 1 immediately)
+        self.MAX_WAVES = 5  # Maximum number of waves
         self.wave_delay = 180  # 3 seconds at 60 FPS
         self.wave_timer = 0  # Timer for wave transition
         self.wave_in_progress = False  # Track if a wave is active
@@ -113,7 +114,7 @@ class PyGame:
         self.is_comboing = False
         self.combo_value = 0
         self.combo_frame_count = 19  # Total combo frames
-        self.combo_damage = 2  # Damage per hit
+        self.combo_damage = 20  # Damage per hit
         self.combo_range = 100  # Combo attack range
 
         # Enemies (start empty, will spawn with waves)
@@ -344,14 +345,21 @@ class PyGame:
         # Check if the current wave is complete (no enemies left and no enemies left to spawn)
         if self.wave_in_progress and not self.enemies and not self.enemies_to_spawn:
             self.wave_in_progress = False
-            self.wave_timer = self.wave_delay  # Start the delay timer
-            print(f"Wave {self.current_wave} completed, preparing next wave")
+            if self.current_wave < self.MAX_WAVES:
+                self.wave_timer = self.wave_delay  # Start the delay timer for next wave
+                print(f"Wave {self.current_wave} completed, preparing next wave")
+            else:
+                self.wave_timer = -1  # Signal win condition
+                print(f"Wave {self.current_wave} completed, you win!")
 
         # If wave is complete and delay timer is active, count down
         if not self.wave_in_progress and self.wave_timer > 0:
             self.wave_timer -= 1
             if self.wave_timer <= 0:
                 self.spawn_wave()  # Start the next wave
+        elif self.wave_timer == -1:  # Win condition
+            self.wave_in_progress = False
+            self.wave_timer = 0  # Prevent further updates
 
         # Handle staggered spawning
         self.update_spawning()
@@ -360,6 +368,10 @@ class PyGame:
         # Display the current wave number in the top-left corner
         wave_text = self.font.render(f"Wave: {self.current_wave}", True, BLACK)
         win.blit(wave_text, (10, 10))
+        # Display "You Win!" if the max waves are reached
+        if self.current_wave >= self.MAX_WAVES and not self.wave_in_progress and not self.enemies:
+            win_text = self.font.render("You Win!", True, BLACK)
+            win.blit(win_text, (self.WIDTH // 2 - win_text.get_width() // 2, self.HEIGHT // 2))
 
     def main(self):
         run = True
