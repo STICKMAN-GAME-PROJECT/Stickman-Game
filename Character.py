@@ -90,7 +90,9 @@ combo = [combo1, combo2, combo3, combo4, combo5, combo6, combo7, combo8, combo9,
          combo11, combo12, combo13, combo14, combo15, combo16, combo17, combo18, combo19]
 
 
-
+'''
+        ///--- This is the hit character png file path ---///
+'''
 
 
 path_fighter_hit = os.path.join('Assets', 'fighter_hit')
@@ -104,3 +106,19 @@ hit4 = os.path.join(path_fighter_hit, "fighter_hit_4.png")
 hit = [hit1, hit2, hit3, hit4]
 
 # =============================================================================
+
+
+path_fighter_death = os.path.join('Assets', 'fighter_death')
+
+death1 = os.path.join(path_fighter_death, "fighter_death_1.png")
+death2 = os.path.join(path_fighter_death, "fighter_death_2.png")
+death3 = os.path.join(path_fighter_death, "fighter_death_3.png")
+death4 = os.path.join(path_fighter_death, "fighter_death_4.png")
+death5 = os.path.join(path_fighter_death, "fighter_death_5.png")
+death6 = os.path.join(path_fighter_death, "fighter_death_6.png")
+death7 = os.path.join(path_fighter_death, "fighter_death_7.png")
+death8 = os.path.join(path_fighter_death, "fighter_death_8.png")
+death9 = os.path.join(path_fighter_death, "fighter_death_9.png")
+death10 = os.path.join(path_fighter_death, "fighter_death_10.png")
+
+death = [death1, death2, death3, death4, death5, death6, death7, death8, death9, death10]
