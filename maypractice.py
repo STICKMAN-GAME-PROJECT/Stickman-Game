@@ -20,7 +20,7 @@ class PyGame:
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
-        self.health = 1000  # Player health
+        self.health = 100  # Player health
 
         # Wave system
         self.current_wave = 0  # Start at wave 0 (will increment to 1 immediately)
@@ -28,6 +28,9 @@ class PyGame:
         self.wave_timer = 0  # Timer for wave transition
         self.wave_in_progress = False  # Track if a wave is active
         self.font = pygame.font.Font(None, 36)  # Font for wave number display
+        self.enemies_to_spawn = []  # Queue for staggered spawning
+        self.spawn_timer = 0  # Timer for staggering enemy spawns
+        self.spawn_interval = 5  # Spawn one enemy every 5 frames (about 0.083 seconds at 60 FPS)
 
         # Jumping mechanics
         self.is_jumping = False
@@ -60,6 +63,17 @@ class PyGame:
         self.character_combo_left = []
         self.character_hit_left = []
         self.character_death_left = []
+
+        # Preload enemy sprites with tint
+        tint_color = (255, 0, 0)  # Red tint for enemies
+        self.enemy_fight_right = [self.tint_surface(pygame.transform.scale(pygame.image.load(c.combo[i]), self.sprite_size), tint_color) for i in range(19)]
+        self.enemy_fight_left = [pygame.transform.flip(self.enemy_fight_right[i], True, False) for i in range(19)]
+        self.enemy_hit_right = [self.tint_surface(pygame.transform.scale(pygame.image.load(c.hit[i]), self.sprite_size), tint_color) for i in range(4)]
+        self.enemy_hit_left = [pygame.transform.flip(self.enemy_hit_right[i], True, False) for i in range(4)]
+        self.enemy_death_right = [self.tint_surface(pygame.transform.scale(pygame.image.load(c.death[i]), self.sprite_size), tint_color) for i in range(10)]
+        self.enemy_death_left = [pygame.transform.flip(self.enemy_death_right[i], True, False) for i in range(10)]
+        self.enemy_idle_right = [self.tint_surface(sprite.copy(), tint_color) for sprite in self.character_idle_right]
+        self.enemy_walk_right = [self.tint_surface(sprite.copy(), tint_color) for sprite in self.character_walk_right]
 
         # Animation states
         self.is_hit = False
@@ -99,7 +113,7 @@ class PyGame:
         self.is_comboing = False
         self.combo_value = 0
         self.combo_frame_count = 19  # Total combo frames
-        self.combo_damage = 20  # Damage per hit
+        self.combo_damage = 2  # Damage per hit
         self.combo_range = 100  # Combo attack range
 
         # Enemies (start empty, will spawn with waves)
@@ -109,6 +123,14 @@ class PyGame:
         self.scroll_transition_frames = 10
         self.current_transition_frame = 0
         self.target_road_scroll = 0
+
+    def tint_surface(self, surface, color):
+        """Apply a raw tint to the surface using color modulation."""
+        tinted = surface.copy()
+        array = pygame.surfarray.pixels3d(tinted)
+        array[...] = (array * color) // 255  # Element-wise multiplication and normalization
+        del array  # Clean up the array to avoid memory issues
+        return tinted
 
     def take_damage(self, damage):
         if self.health > 0:  # Only take damage if alive
@@ -143,17 +165,36 @@ class PyGame:
         # Spawn enemies at positions starting from 1000, spaced 1000 units apart
         start_pos = 1000
         spacing = 1000
-        self.enemies = [
-            Enemy(
-                world_x=start_pos + i * spacing,
-                player_world_x=self.world_x,
-                idle_right=self.character_idle_right,
-                walk_right=self.character_walk_right,
-                run_right=self.character_run_right,
-                wave_number=self.current_wave
-            ) for i in range(num_enemies)
+        # Queue enemies for staggered spawning
+        self.enemies_to_spawn = [
+            (start_pos + i * spacing) for i in range(num_enemies)
         ]
-        print(f"Wave {self.current_wave} started with {num_enemies} enemies")
+        self.spawn_timer = 0
+        print(f"Wave {self.current_wave} started, preparing to spawn {num_enemies} enemies")
+
+    def update_spawning(self):
+        if self.enemies_to_spawn:
+            self.spawn_timer -= 1
+            if self.spawn_timer <= 0:
+                # Spawn one enemy
+                world_x = self.enemies_to_spawn.pop(0)
+                enemy = Enemy(
+                    world_x=world_x,
+                    player_world_x=self.world_x,
+                    idle_right=self.enemy_idle_right,
+                    walk_right=self.enemy_walk_right,
+                    run_right=self.character_run_right,
+                    fight_right=self.enemy_fight_right,
+                    fight_left=self.enemy_fight_left,
+                    hit_right=self.enemy_hit_right,
+                    hit_left=self.enemy_hit_left,
+                    death_right=self.enemy_death_right,
+                    death_left=self.enemy_death_left,
+                    wave_number=self.current_wave
+                )
+                self.enemies.append(enemy)
+                print(f"Spawned enemy at position {world_x} for Wave {self.current_wave}")
+                self.spawn_timer = self.spawn_interval  # Reset timer for next enemy
 
     def update(self, dt):
         if self.is_jumping and not self.is_dying:
@@ -300,8 +341,8 @@ class PyGame:
             self.spawn_wave()
             return
 
-        # Check if the current wave is complete (no enemies left)
-        if self.wave_in_progress and not self.enemies:
+        # Check if the current wave is complete (no enemies left and no enemies left to spawn)
+        if self.wave_in_progress and not self.enemies and not self.enemies_to_spawn:
             self.wave_in_progress = False
             self.wave_timer = self.wave_delay  # Start the delay timer
             print(f"Wave {self.current_wave} completed, preparing next wave")
@@ -311,6 +352,9 @@ class PyGame:
             self.wave_timer -= 1
             if self.wave_timer <= 0:
                 self.spawn_wave()  # Start the next wave
+
+        # Handle staggered spawning
+        self.update_spawning()
 
     def draw_wave_info(self, win):
         # Display the current wave number in the top-left corner

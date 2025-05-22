@@ -2,7 +2,7 @@ import pygame
 import Character as c
 
 class Enemy:
-    def __init__(self, world_x, player_world_x=500, idle_right=None, walk_right=None, run_right=None, wave_number=1):
+    def __init__(self, world_x, player_world_x=500, idle_right=None, walk_right=None, run_right=None, fight_right=None, fight_left=None, hit_right=None, hit_left=None, death_right=None, death_left=None, wave_number=1):
         self.world_x = world_x
         self.width = 400
         self.height = 400
@@ -42,29 +42,17 @@ class Enemy:
         self.combo_delay = 60  # 1 second delay before starting combo (at 60 FPS)
         self.combo_delay_timer = 0  # Timer for delay
 
-        # Raw tint color (red: RGB = (255, 0, 0))
-        tint_color = (255, 0, 0)
-
-        # Load and scale animations, then apply raw tint
-        self.sprite_size = (400, 400)
-        self.fight_right = [self.tint_surface(pygame.transform.scale(pygame.image.load(c.combo[i]), self.sprite_size), tint_color) for i in range(19)]
-        self.fight_left = [pygame.transform.flip(self.fight_right[i], True, False) for i in range(19)]
-        self.hit_right = [self.tint_surface(pygame.transform.scale(pygame.image.load(c.hit[i]), self.sprite_size), tint_color) for i in range(4)]
-        self.hit_left = [pygame.transform.flip(self.hit_right[i], True, False) for i in range(4)]
-        self.death_right = [self.tint_surface(pygame.transform.scale(pygame.image.load(c.death[i]), self.sprite_size), tint_color) for i in range(10)]
-        self.death_left = [pygame.transform.flip(self.death_right[i], True, False) for i in range(10)]
-        self.idle_right = [self.tint_surface(sprite.copy(), tint_color) for sprite in (idle_right or [])]
-        self.walk_right = [self.tint_surface(sprite.copy(), tint_color) for sprite in (walk_right or [])]
+        # Use preloaded sprites
+        self.fight_right = fight_right
+        self.fight_left = fight_left
+        self.hit_right = hit_right
+        self.hit_left = hit_left
+        self.death_right = death_right
+        self.death_left = death_left
+        self.idle_right = idle_right
+        self.walk_right = walk_right
         self.idle_left = [pygame.transform.flip(self.idle_right[i], True, False) for i in range(8)]
         self.walk_left = [pygame.transform.flip(self.walk_right[i], True, False) for i in range(8)]
-
-    def tint_surface(self, surface, color):
-        """Apply a raw tint to the surface using color modulation."""
-        tinted = surface.copy()
-        array = pygame.surfarray.pixels3d(tinted)
-        array[...] = (array * color) // 255  # Element-wise multiplication and normalization
-        del array  # Clean up the array to avoid memory issues
-        return tinted
 
     def take_damage(self, damage):
         if self.death_animation_finished:  # Ignore damage if already dead
