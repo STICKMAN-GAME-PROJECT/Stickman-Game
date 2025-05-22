@@ -2,15 +2,17 @@ import pygame
 import Character as c
 
 class Enemy:
-    def __init__(self, world_x, player_world_x=500, idle_right=None, walk_right=None, run_right=None):
+    def __init__(self, world_x, player_world_x=500, idle_right=None, walk_right=None, run_right=None, wave_number=1):
         self.world_x = world_x
         self.width = 400
         self.height = 400
-        self.health = 50
+        # Base health is 50, increases by 10 per wave (e.g., Wave 2: 60, Wave 3: 70)
+        self.health = 50 + (wave_number - 1) * 10
         self.stunned = False
         self.stun_duration = 300  # 5 seconds at 60 FPS
         self.stun_timer = 0
-        self.speed = 2
+        # Base speed is 2, increases slightly per wave
+        self.speed = 2 + (wave_number - 1) * 0.2
         self.facing_left = world_x > player_world_x  # Face player initially
         self.value = 0  # For idle/walk animation
         self.current_speed = 0.23  # Default to walk speed

@@ -10,6 +10,7 @@ Clock = pygame.time.Clock()
 WHITE = (220, 221, 220)
 RED = (255, 0, 0)  # For hitbox
 GREEN = (0, 255, 0)  # For enemy center
+BLACK = (0, 0, 0)  # For text
 
 class PyGame:
     def __init__(self):
@@ -19,7 +20,14 @@ class PyGame:
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
-        self.health = 100  # Player health
+        self.health = 1000  # Player health
+
+        # Wave system
+        self.current_wave = 0  # Start at wave 0 (will increment to 1 immediately)
+        self.wave_delay = 180  # 3 seconds at 60 FPS
+        self.wave_timer = 0  # Timer for wave transition
+        self.wave_in_progress = False  # Track if a wave is active
+        self.font = pygame.font.Font(None, 36)  # Font for wave number display
 
         # Jumping mechanics
         self.is_jumping = False
@@ -91,11 +99,11 @@ class PyGame:
         self.is_comboing = False
         self.combo_value = 0
         self.combo_frame_count = 19  # Total combo frames
-        self.combo_damage = 2  # Damage per hit
+        self.combo_damage = 20  # Damage per hit
         self.combo_range = 100  # Combo attack range
 
-        # Enemies
-        self.enemies = [Enemy(world_x, self.world_x, self.character_idle_right, self.character_walk_right, self.character_run_right) for world_x in range(1000, 10000, 1000)]
+        # Enemies (start empty, will spawn with waves)
+        self.enemies = []
 
         # Scroll transition for smooth toggling
         self.scroll_transition_frames = 10
@@ -126,6 +134,26 @@ class PyGame:
         if not self.is_jumping and not self.is_dying:
             self.velocity_y = self.jump_strength
             self.is_jumping = True
+
+    def spawn_wave(self):
+        self.current_wave += 1
+        self.wave_in_progress = True
+        # Base number of enemies is 2, increase by 1 per wave (e.g., Wave 1: 2, Wave 2: 3, Wave 3: 4)
+        num_enemies = 2 + (self.current_wave - 1)
+        # Spawn enemies at positions starting from 1000, spaced 1000 units apart
+        start_pos = 1000
+        spacing = 1000
+        self.enemies = [
+            Enemy(
+                world_x=start_pos + i * spacing,
+                player_world_x=self.world_x,
+                idle_right=self.character_idle_right,
+                walk_right=self.character_walk_right,
+                run_right=self.character_run_right,
+                wave_number=self.current_wave
+            ) for i in range(num_enemies)
+        ]
+        print(f"Wave {self.current_wave} started with {num_enemies} enemies")
 
     def update(self, dt):
         if self.is_jumping and not self.is_dying:
@@ -266,6 +294,29 @@ class PyGame:
                         print(f"Applying {self.combo_damage} damage to enemy at {enemy.world_x}, health: {enemy.health}")
                         enemy.take_damage(self.combo_damage)
 
+    def update_wave(self):
+        # If no wave is in progress, start the first wave immediately
+        if self.current_wave == 0:
+            self.spawn_wave()
+            return
+
+        # Check if the current wave is complete (no enemies left)
+        if self.wave_in_progress and not self.enemies:
+            self.wave_in_progress = False
+            self.wave_timer = self.wave_delay  # Start the delay timer
+            print(f"Wave {self.current_wave} completed, preparing next wave")
+
+        # If wave is complete and delay timer is active, count down
+        if not self.wave_in_progress and self.wave_timer > 0:
+            self.wave_timer -= 1
+            if self.wave_timer <= 0:
+                self.spawn_wave()  # Start the next wave
+
+    def draw_wave_info(self, win):
+        # Display the current wave number in the top-left corner
+        wave_text = self.font.render(f"Wave: {self.current_wave}", True, BLACK)
+        win.blit(wave_text, (10, 10))
+
     def main(self):
         run = True
         win = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
@@ -353,6 +404,9 @@ class PyGame:
             if keys[pygame.K_UP]:
                 self.jump()
 
+            # Update wave system
+            self.update_wave()
+
             # Update animations and check for hits
             self.update_animations()
             self.update_enemies()  # Update movement before checking hits (now a no-op)
@@ -362,6 +416,7 @@ class PyGame:
             self.draw_background(win)
             visible_enemies = self.draw_enemies(win)
             self.check_combo_hits(win)  # Pass win to check hits
+            self.draw_wave_info(win)  # Draw wave number
 
             # Use pre-scaled sprites
             char_idle_right = self.character_idle_right[int(self.value)]
