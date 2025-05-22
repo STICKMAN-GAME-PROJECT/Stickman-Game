@@ -7,10 +7,11 @@ from enemy import Enemy
 Clock = pygame.time.Clock()
 
 # Define colors
-WHITE = (220, 221, 220)
+YELLOW = (225, 225, 0)
 RED = (255, 0, 0)  # For hitbox
 GREEN = (0, 255, 0)  # For enemy center
 BLACK = (0, 0, 0)  # For text
+WHITE = (220, 221, 220)
 
 class PyGame:
     def __init__(self):
@@ -24,11 +25,12 @@ class PyGame:
 
         # Wave system
         self.current_wave = 0  # Start at wave 0 (will increment to 1 immediately)
-        self.MAX_WAVES = 5  # Maximum number of waves
+        self.MAX_WAVES = 3  # Maximum number of waves
         self.wave_delay = 180  # 3 seconds at 60 FPS
         self.wave_timer = 0  # Timer for wave transition
         self.wave_in_progress = False  # Track if a wave is active
         self.font = pygame.font.Font(None, 36)  # Font for wave number display
+        self.win_font = pygame.font.Font(None, 124)  # Larger font for win message
         self.enemies_to_spawn = []  # Queue for staggered spawning
         self.spawn_timer = 0  # Timer for staggering enemy spawns
         self.spawn_interval = 5  # Spawn one enemy every 5 frames (about 0.083 seconds at 60 FPS)
@@ -370,8 +372,8 @@ class PyGame:
         win.blit(wave_text, (10, 10))
         # Display "You Win!" if the max waves are reached
         if self.current_wave >= self.MAX_WAVES and not self.wave_in_progress and not self.enemies:
-            win_text = self.font.render("You Win!", True, BLACK)
-            win.blit(win_text, (self.WIDTH // 2 - win_text.get_width() // 2, self.HEIGHT // 2))
+            win_text = self.win_font.render("You Win!", True, YELLOW)
+            win.blit(win_text, (self.WIDTH // 2 - win_text.get_width() // 2, self.HEIGHT // 4))
 
     def main(self):
         run = True
