@@ -89,7 +89,7 @@ class PyGame:
         # Environment assets
         try:
             self.road = pygame.image.load("Assets/Terrain/ohk_road_asset.png")
-            self.footpath = pygame.image.load("Assets/Terrain/ohk_footpath_asset.png")
+            self.footpath = pygame.image.load("Assets/Terrain/footpath.png")
             self.wall = pygame.image.load("Assets/Terrain/ohk_wall_asset.png")
             self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
         except pygame.error as e:
