@@ -89,11 +89,10 @@ class PyGame:
         # Environment assets
         try:
             self.road = pygame.image.load("Assets/Terrain/ohk_road_asset.png")
-            self.footpath = pygame.image.load("Assets/Terrain/ohk_footpath_asset.png")  # Corrected typo
+            self.footpath = pygame.image.load("Assets/Terrain/ohk_footpath_asset.png")
             self.wall = pygame.image.load("Assets/Terrain/ohk_wall_asset.png")
             self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
         except pygame.error as e:
-            print(f"Error loading assets: {e}")
             self.footpath = pygame.Surface((100, 60))  # Fallback: gray rectangle
             self.footpath.fill((150, 150, 150))
 
@@ -151,7 +150,6 @@ class PyGame:
     def take_damage(self, damage):
         if self.health > 0:  # Only take damage if alive
             self.health -= damage
-            print(f"Player takes {damage} death! Health: {self.health}")
             # Trigger hit animation if not already playing
             if not self.is_hit and not self.is_comboing and not self.is_dying:  # Don't interrupt other animations
                 self.is_hit = True
@@ -186,7 +184,6 @@ class PyGame:
             (start_pos + i * spacing) for i in range(num_enemies)
         ]
         self.spawn_timer = 0
-        print(f"Wave {self.current_wave} started, preparing to spawn {num_enemies} enemies")
 
     def update_spawning(self):
         if self.enemies_to_spawn:
@@ -209,7 +206,6 @@ class PyGame:
                     wave_number=self.current_wave
                 )
                 self.enemies.append(enemy)
-                print(f"Spawned enemy at position {world_x} for Wave {self.current_wave}")
                 self.spawn_timer = self.spawn_interval  # Reset timer for next enemy
 
     def update(self, dt):
@@ -301,7 +297,6 @@ class PyGame:
             enemy.update_animation()
             # Remove enemy immediately after death animation
             if enemy.ready_to_remove:
-                print(f"Removing enemy at {enemy.world_x} immediately after death animation")
                 self.enemies.remove(enemy)
                 continue
             enemy.draw(win, scroll_offset)
@@ -353,7 +348,6 @@ class PyGame:
             for enemy in self.enemies[:]:  # Copy list to allow removal
                 # Skip if enemy is already dead
                 if enemy.death_animation_finished or enemy.health <= 0:
-                    print(f"Skipping damage to enemy at {enemy.world_x}, already dead or dying")
                     continue
                 enemy_center = enemy.world_x + enemy.width / 2
                 enemy_screen_center = enemy_center - (self.free_mode_offset if self.enemy_exists else self.road_scroll)
@@ -364,7 +358,6 @@ class PyGame:
                 if int(self.combo_value) in [1, 6, 16]:
                     distance = abs(enemy_center - hitbox_center)
                     if hitbox_left <= enemy_center <= hitbox_right:
-                        print(f"Applying {self.combo_damage} damage to enemy at {enemy.world_x}, health: {enemy.health}")
                         enemy.take_damage(self.combo_damage)
 
     def update_wave(self):
@@ -378,10 +371,8 @@ class PyGame:
             self.wave_in_progress = False
             if self.current_wave < self.MAX_WAVES:
                 self.wave_timer = self.wave_delay  # Start the delay timer for next wave
-                print(f"Wave {self.current_wave} completed, preparing next wave")
             else:
                 self.wave_timer = -1  # Signal win condition
-                print(f"Wave {self.current_wave} completed, you win!")
 
         # If wave is complete and delay timer is active, count down
         if not self.wave_in_progress and self.wave_timer > 0:
