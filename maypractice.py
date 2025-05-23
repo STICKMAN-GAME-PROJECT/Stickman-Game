@@ -38,8 +38,8 @@ class PyGame:
         # Jumping mechanics
         self.is_jumping = False
         self.velocity_y = 0
-        self.gravity = 0.5
-        self.jump_strength = -12
+        self.gravity = 0.85
+        self.jump_strength = -16
 
         # Movement tracking
         self.walk_left = False
