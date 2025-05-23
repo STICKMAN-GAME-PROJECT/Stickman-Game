@@ -190,15 +190,15 @@ class Enemy:
             if self.is_dying:
                 death_sprite = self.death_left[int(self.death_value)] if self.facing_left else self.death_right[int(self.death_value)]
                 print(f"Enemy at {self.world_x} drawing death frame: {int(self.death_value)}")
-                win.blit(death_sprite, (enemy_screen_x, 250))  # Adjust y-position as needed
+                win.blit(death_sprite, (enemy_screen_x, 380))  # Adjust y-position as needed
             elif self.is_hit:
                 hit_sprite = self.hit_left[int(self.hit_value)] if self.facing_left else self.hit_right[int(self.hit_value)]
                 print(f"Enemy at {self.world_x} drawing hit frame: {int(self.hit_value)}")
-                win.blit(hit_sprite, (enemy_screen_x, 250))  # Adjust y-position as needed
+                win.blit(hit_sprite, (enemy_screen_x, 380))  # Adjust y-position as needed
             elif self.is_fighting:
                 fight_sprite = self.fight_left[int(self.fight_value)] if self.facing_left else self.fight_right[int(self.fight_value)]
                 print(f"Enemy at {self.world_x} drawing fight frame: {int(self.fight_value)}")
-                win.blit(fight_sprite, (enemy_screen_x, 250))  # Adjust y-position as needed
+                win.blit(fight_sprite, (enemy_screen_x, 380))  # Adjust y-position as needed
             elif not self.death_animation_finished:  # Only draw idle/walk if not dead
                 if self.current_speed == self.animation_speed["walk"]:
                     sprite = self.walk_left[int(self.value)] if self.facing_left else self.walk_right[int(self.value)]
@@ -206,6 +206,6 @@ class Enemy:
                     sprite = self.idle_left[int(self.value)] if self.facing_left else self.idle_right[int(self.value)]
                 if sprite:  # Ensure sprite exists before blitting
                     print(f"Enemy at {self.world_x} drawing idle/walk frame: {int(self.value)}")
-                    win.blit(sprite, (enemy_screen_x, 250))  # Adjust y-position as needed
+                    win.blit(sprite, (enemy_screen_x, 380))  # Adjust y-position as needed
             else:
                 print(f"Enemy at {self.world_x} is dead, not drawing (finished: {self.death_animation_finished})")

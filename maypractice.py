@@ -16,8 +16,8 @@ WHITE = (220, 221, 220)
 class PyGame:
     def __init__(self):
         pygame.init()
-        self.HEIGHT, self.WIDTH = 600, 1000
-        self.x, self.y = 500, 250
+        self.HEIGHT, self.WIDTH = 720, 1200
+        self.x, self.y = 500, 380
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
@@ -87,17 +87,20 @@ class PyGame:
         self.death_frame_count = 10  # Total death animation frames
 
         # Environment assets
-        self.road = pygame.image.load("Assets/Terrain/road.png")
-        self.wall = pygame.image.load("Assets/Terrain/wallr.png")
+        self.road = pygame.image.load("Assets/Terrain/ohk_road_asset.png")
+        self.footpath = pygame.image.load("Assets/Terrain/ohk_footpath_aset.png")
+        self.wall = pygame.image.load("Assets/Terrain/ohk_wall_asset.png")
         self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
 
         # Background dimensions
         self.building_width = self.buildings[0].get_width()
+        self.footpath_width = self.footpath.get_width()
         self.road_width = self.road.get_width()
         self.wall_width = self.wall.get_width()
         
         # Scroll positions
         self.building_scroll = 0
+        self.footpath_scroll = 0
         self.road_scroll = 0
         self.wall_scroll = 0
         self.free_mode_offset = 0
@@ -238,7 +241,7 @@ class PyGame:
             if pos_x > self.WIDTH:
                 continue
             for b in self.buildings:
-                win.blit(b, (pos_x, 0))
+                win.blit(b, (pos_x, 60))
 
         # Wall (middle layer)
         wall_tiles = math.ceil(self.WIDTH / self.wall_width) + 2
@@ -247,7 +250,16 @@ class PyGame:
             pos_x = i * self.wall_width - scroll_amount
             if -self.wall_width <= pos_x <= self.WIDTH:
                 wall = pygame.transform.scale(self.wall, (self.wall_width, 180))
-                win.blit(wall, (pos_x, 320))
+                win.blit(wall, (pos_x, 380))
+
+        # Footpath (second closest layer)
+        footpath_tiles = math.ceil(self.WIDTH / self.footpath_width) + 2
+        for i in range(-1, footpath_tiles):
+            scroll_amount = self.footpath_scroll % self.footpath_width
+            pos_x = i * self.footpath_width - scroll_amount
+            if -self.footpath_width <= pos_x <= self.WIDTH:
+                footpath = pygame.transform.scale(self.footpath, (self.footpath_width, 60))
+                win.blit(footpath, (pos_x, 560))
 
         # Road (closest layer)
         road_tiles = math.ceil(self.WIDTH / self.road_width) + 2
@@ -256,7 +268,7 @@ class PyGame:
             pos_x = i * self.road_width - scroll_amount
             if -self.road_width <= pos_x <= self.WIDTH:
                 road = pygame.transform.scale(self.road, (self.road_width, 100))
-                win.blit(road, (pos_x, 500))
+                win.blit(road, (pos_x, 620))
 
     def draw_enemies(self, win):
         visible_enemies = 0
