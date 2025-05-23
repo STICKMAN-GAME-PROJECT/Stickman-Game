@@ -87,16 +87,26 @@ class PyGame:
         self.death_frame_count = 10  # Total death animation frames
 
         # Environment assets
-        self.road = pygame.image.load("Assets/Terrain/ohk_road_asset.png")
-        self.footpath = pygame.image.load("Assets/Terrain/ohk_footpath_aset.png")
-        self.wall = pygame.image.load("Assets/Terrain/ohk_wall_asset.png")
-        self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
+        try:
+            self.road = pygame.image.load("Assets/Terrain/ohk_road_asset.png")
+            self.footpath = pygame.image.load("Assets/Terrain/ohk_footpath_asset.png")  # Corrected typo
+            self.wall = pygame.image.load("Assets/Terrain/ohk_wall_asset.png")
+            self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
+        except pygame.error as e:
+            print(f"Error loading assets: {e}")
+            self.footpath = pygame.Surface((100, 60))  # Fallback: gray rectangle
+            self.footpath.fill((150, 150, 150))
 
         # Background dimensions
         self.building_width = self.buildings[0].get_width()
         self.footpath_width = self.footpath.get_width()
         self.road_width = self.road.get_width()
         self.wall_width = self.wall.get_width()
+        
+        # Calculate scaled footpath width
+        original_height = self.footpath.get_height()
+        self.scale_factor = 60 / original_height
+        self.footpath_scaled_width = int(self.footpath_width * self.scale_factor)
         
         # Scroll positions
         self.building_scroll = 0
@@ -253,13 +263,20 @@ class PyGame:
                 win.blit(wall, (pos_x, 380))
 
         # Footpath (second closest layer)
-        footpath_tiles = math.ceil(self.WIDTH / self.footpath_width) + 2
-        for i in range(-1, footpath_tiles):
-            scroll_amount = self.footpath_scroll % self.footpath_width
-            pos_x = i * self.footpath_width - scroll_amount
-            if -self.footpath_width <= pos_x <= self.WIDTH:
-                footpath = pygame.transform.scale(self.footpath, (self.footpath_width, 60))
-                win.blit(footpath, (pos_x, 560))
+        # Pre-scale the footpath
+        footpath = pygame.transform.scale(self.footpath, (self.footpath_scaled_width, 60))
+        # Calculate the number of tiles needed based on scaled width
+        footpath_tiles = math.ceil(self.WIDTH / self.footpath_scaled_width) + 2
+        # Start drawing from the leftmost visible position
+        scroll_amount = self.footpath_scroll % self.footpath_scaled_width
+        start_pos_x = -scroll_amount
+        for i in range(footpath_tiles):
+            pos_x = start_pos_x + i * self.footpath_scaled_width
+            if pos_x > self.WIDTH:
+                break
+            if pos_x < -self.footpath_scaled_width:
+                continue
+            win.blit(footpath, (pos_x, 560))
 
         # Road (closest layer)
         road_tiles = math.ceil(self.WIDTH / self.road_width) + 2
@@ -443,6 +460,7 @@ class PyGame:
                     self.road_scroll = self.free_mode_offset
                     self.building_scroll = self.free_mode_offset * 0.3
                     self.wall_scroll = self.free_mode_offset * 0.65
+                    self.footpath_scroll = self.free_mode_offset * 0.75  # Sync with road scroll
                 else:
                     self.screen_x = self.WIDTH / 2 - self.player_width / 2
                     self.target_road_scroll = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
@@ -450,6 +468,7 @@ class PyGame:
                     self.road_scroll = self.free_mode_offset
                     self.building_scroll = self.road_scroll * 0.3
                     self.wall_scroll = self.road_scroll * 0.65
+                    self.footpath_scroll = self.road_scroll * 0.75  # Sync during transition
                     self.free_mode_offset = 0
 
             # Update positions based on mode
@@ -459,17 +478,22 @@ class PyGame:
                 self.road_scroll = self.free_mode_offset
                 self.building_scroll = self.free_mode_offset * 0.3
                 self.wall_scroll = self.free_mode_offset * 0.65
+                self.footpath_scroll = self.free_mode_offset * 0.75  # Sync with road scroll
             else:
                 self.world_x += move_amount
                 self.screen_x = self.WIDTH / 2 - self.player_width / 2
                 if self.current_transition_frame < self.scroll_transition_frames:
                     t = self.current_transition_frame / self.scroll_transition_frames
                     self.road_scroll = self.road_scroll * (1 - t) + self.target_road_scroll * t
+                    self.building_scroll = self.road_scroll * 0.3
+                    self.wall_scroll = self.road_scroll * 0.65
+                    self.footpath_scroll = self.road_scroll * 0.75  # Sync during transition
                     self.current_transition_frame += 1
                 else:
                     self.road_scroll = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
-                self.building_scroll = self.road_scroll * 0.3
-                self.wall_scroll = self.road_scroll * 0.65
+                    self.building_scroll = self.road_scroll * 0.3
+                    self.wall_scroll = self.road_scroll * 0.65
+                    self.footpath_scroll = self.road_scroll * 0.75  # Sync with road scroll
 
             if keys[pygame.K_UP]:
                 self.jump()
