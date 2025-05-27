@@ -78,14 +78,14 @@ class Enemy:
         if self.is_fighting and not self.is_dying:
             # Adjust hitbox center based on facing direction
             if self.facing_left:
-                hitbox_center = self.world_x + self.width / 2 - 50  # Shift left
+                hitbox_center = self.world_x + self.width / 2 - 50 * self.scale_factor  # Shift left
             else:
-                hitbox_center = self.world_x + self.width / 2 + 50  # Shift right
+                hitbox_center = self.world_x + self.width / 2 + 50 * self.scale_factor  # Shift right
             hitbox_left = hitbox_center - self.attack_range / 2
             hitbox_right = hitbox_center + self.attack_range / 2
 
             # Apply damage on frames 1, 6, 16
-            player_center = player_world_x + self.width / 2  # Assuming player width is same as enemy
+            player_center = player_world_x + self.width / (2 * self.scale_factor)  # Convert to base coordinates
             if int(self.fight_value) in [1, 6, 16]:
                 if hitbox_left <= player_center <= hitbox_right:
                     if player:
@@ -187,7 +187,7 @@ class Enemy:
                 self.stunned = False
 
     def draw(self, win, scroll_offset, offset_y=0):
-        enemy_screen_x = (self.world_x - scroll_offset) * self.scale_factor
+        enemy_screen_x = self.world_x * self.scale_factor - scroll_offset
         # Adjust y-position with offset_y for letterboxing and scale it
         base_y = (380 + offset_y) * self.scale_factor
         if -self.width <= enemy_screen_x <= win.get_width():  # Only draw if visible

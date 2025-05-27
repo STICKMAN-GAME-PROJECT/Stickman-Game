@@ -322,7 +322,7 @@ class PyGame:
                 enemy.world_x -= 10000
             enemy.update_animation()
             if not enemy.ready_to_remove:
-                enemy.draw(surface, scroll_offset * self.scale_factor, self.scale_factor)
+                enemy.draw(surface, scroll_offset * self.scale_factor, 0)
                 enemy_screen_x = (enemy.world_x - scroll_offset) * self.scale_factor
                 if -enemy.width <= enemy_screen_x <= self.game_width:
                     visible_enemies += 1
@@ -356,11 +356,11 @@ class PyGame:
     def check_combo_hits(self, surface):
         if self.is_comboing:
             if self.facing_left:
-                hitbox_center = self.world_x + 400 / 2 - 50
+                hitbox_center = self.world_x + (400 * self.scale_factor) / 2 - 50 * self.scale_factor
             else:
-                hitbox_center = self.world_x + 400 / 2 + 50
-            hitbox_left = hitbox_center - 100 / 2
-            hitbox_right = hitbox_center + 100 / 2
+                hitbox_center = self.world_x + (400 * self.scale_factor) / 2 + 50 * self.scale_factor
+            hitbox_left = hitbox_center - (100 * self.scale_factor) / 2
+            hitbox_right = hitbox_center + (100 * self.scale_factor) / 2
 
             for enemy in self.enemies[:]:
                 if enemy.death_animation_finished or enemy.health <= 0:
