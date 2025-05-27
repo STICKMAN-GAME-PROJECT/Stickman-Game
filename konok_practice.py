@@ -1,6 +1,7 @@
 import pygame
 import Character as c
 import math
+import gc  # For manual garbage collection
 from enemy import Enemy
 
 # Initialize Pygame clock to control the frame rate
@@ -55,29 +56,51 @@ class PyGame:
         
         # Character animations (pre-scaled to 400x400)
         self.sprite_size = (400, 400)
-        self.character_idle_right = [pygame.transform.scale(pygame.image.load(c.stand_Right[i]), self.sprite_size) for i in range(8)]
-        self.character_walk_right = [pygame.transform.scale(pygame.image.load(c.walk[i]), self.sprite_size) for i in range(8)]
-        self.character_run_right = [pygame.transform.scale(pygame.image.load(c.run[i]), self.sprite_size) for i in range(8)]
-        self.character_combo_right = [pygame.transform.scale(pygame.image.load(c.combo[i]), self.sprite_size) for i in range(19)]
-        self.character_hit_right = [pygame.transform.scale(pygame.image.load(c.hit[i]), self.sprite_size) for i in range(4)]
-        self.character_death_right = [pygame.transform.scale(pygame.image.load(c.death[i]), self.sprite_size) for i in range(10)]
-        self.character_walk_left = []
-        self.character_run_left = []
-        self.character_idle_left = []
-        self.character_combo_left = []
-        self.character_hit_left = []
-        self.character_death_left = []
+        
+        # Sprite cache to avoid reloading images
+        self.sprite_cache = {}
+        def load_sprite(path, size, tint=None):
+            key = (path, size, tint)
+            if key not in self.sprite_cache:
+                try:
+                    sprite = pygame.image.load(path)
+                    sprite = pygame.transform.scale(sprite, size)
+                    if tint:
+                        sprite = self.tint_surface(sprite, tint)
+                    self.sprite_cache[key] = sprite
+                except pygame.error as e:
+                    print(f"Error loading sprite {path}: {e}")
+                    sprite = pygame.Surface(size)
+                    sprite.fill((255, 0, 0))  # Fallback: red square
+                    self.sprite_cache[key] = sprite
+            return self.sprite_cache[key]
 
-        # Preload enemy sprites with tint
-        tint_color = (255, 0, 0)  # Red tint for enemies
-        self.enemy_fight_right = [self.tint_surface(pygame.transform.scale(pygame.image.load(c.combo[i]), self.sprite_size), tint_color) for i in range(19)]
-        self.enemy_fight_left = [pygame.transform.flip(self.enemy_fight_right[i], True, False) for i in range(19)]
-        self.enemy_hit_right = [self.tint_surface(pygame.transform.scale(pygame.image.load(c.hit[i]), self.sprite_size), tint_color) for i in range(4)]
-        self.enemy_hit_left = [pygame.transform.flip(self.enemy_hit_right[i], True, False) for i in range(4)]
-        self.enemy_death_right = [self.tint_surface(pygame.transform.scale(pygame.image.load(c.death[i]), self.sprite_size), tint_color) for i in range(10)]
-        self.enemy_death_left = [pygame.transform.flip(self.enemy_death_right[i], True, False) for i in range(10)]
-        self.enemy_idle_right = [self.tint_surface(sprite.copy(), tint_color) for sprite in self.character_idle_right]
-        self.enemy_walk_right = [self.tint_surface(sprite.copy(), tint_color) for sprite in self.character_walk_right]
+        # Load sprites using the cache
+        tint_color = (255, 0, 0)
+        self.character_idle_right = [load_sprite(c.stand_Right[i], self.sprite_size) for i in range(8)]
+        self.character_walk_right = [load_sprite(c.walk[i], self.sprite_size) for i in range(8)]
+        self.character_run_right = [load_sprite(c.run[i], self.sprite_size) for i in range(8)]
+        self.character_combo_right = [load_sprite(c.combo[i], self.sprite_size) for i in range(19)]
+        self.character_hit_right = [load_sprite(c.hit[i], self.sprite_size) for i in range(4)]
+        self.character_death_right = [load_sprite(c.death[i], self.sprite_size) for i in range(10)]
+
+        # Enemy sprites with tint
+        self.enemy_fight_right = [load_sprite(c.combo[i], self.sprite_size, tint_color) for i in range(19)]
+        self.enemy_hit_right = [load_sprite(c.hit[i], self.sprite_size, tint_color) for i in range(4)]
+        self.enemy_death_right = [load_sprite(c.death[i], self.sprite_size, tint_color) for i in range(10)]
+        self.enemy_idle_right = [load_sprite(c.stand_Right[i], self.sprite_size, tint_color) for i in range(8)]
+        self.enemy_walk_right = [load_sprite(c.walk[i], self.sprite_size, tint_color) for i in range(8)]
+
+        # Pre-generate left-facing sprites
+        self.character_walk_left = [pygame.transform.flip(sprite, True, False) for sprite in self.character_walk_right]
+        self.character_run_left = [pygame.transform.flip(sprite, True, False) for sprite in self.character_run_right]
+        self.character_idle_left = [pygame.transform.flip(sprite, True, False) for sprite in self.character_idle_right]
+        self.character_combo_left = [pygame.transform.flip(sprite, True, False) for sprite in self.character_combo_right]
+        self.character_hit_left = [pygame.transform.flip(sprite, True, False) for sprite in self.character_hit_right]
+        self.character_death_left = [pygame.transform.flip(sprite, True, False) for sprite in self.character_death_right]
+        self.enemy_fight_left = [pygame.transform.flip(sprite, True, False) for sprite in self.enemy_fight_right]
+        self.enemy_hit_left = [pygame.transform.flip(sprite, True, False) for sprite in self.enemy_hit_right]
+        self.enemy_death_left = [pygame.transform.flip(sprite, True, False) for sprite in self.enemy_death_right]
 
         # Animation states
         self.is_hit = False
@@ -94,8 +117,16 @@ class PyGame:
             self.wall = pygame.image.load("Assets/Terrain/ohk_wall_asset.png")
             self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
         except pygame.error as e:
-            self.footpath = pygame.Surface((100, 60))  # Fallback: gray rectangle
+            print(f"Error loading background assets: {e}")
+            self.road = pygame.Surface((1200, 100))
+            self.road.fill((100, 100, 100))
+            self.footpath = pygame.Surface((1200, 60))
             self.footpath.fill((150, 150, 150))
+            self.wall = pygame.Surface((1200, 180))
+            self.wall.fill((50, 50, 50))
+            self.buildings = [pygame.Surface((1200, 200)) for _ in range(5)]
+            for b in self.buildings:
+                b.fill((200, 200, 200))
 
         # Background dimensions
         self.building_width = self.buildings[0].get_width()
@@ -107,6 +138,12 @@ class PyGame:
         original_height = self.footpath.get_height()
         self.scale_factor_adjusted = 60 / original_height
         self.footpath_scaled_width = int(self.footpath_width * self.scale_factor_adjusted)
+
+        # Pre-scale background assets
+        self.road_scaled = pygame.transform.scale(self.road, (self.road_width, 100))
+        self.footpath_scaled = pygame.transform.scale(self.footpath, (self.footpath_scaled_width, 60))
+        self.wall_scaled = pygame.transform.scale(self.wall, (self.wall_width, 180))
+        self.buildings_scaled = [pygame.transform.scale(b, (self.building_width, b.get_height())) for b in self.buildings]
         
         # Scroll positions
         self.building_scroll = 0
@@ -119,10 +156,6 @@ class PyGame:
         self.player_width = 400
         self.world_x = 500
         self.screen_x = self.WIDTH / 2 - self.player_width / 2
-
-        # Fullscreen and enemy tracking (fullscreen disabled)
-        self.enemy_exists = False
-        self.last_tab_state = False
 
         # Combo state
         self.is_comboing = False
@@ -143,14 +176,14 @@ class PyGame:
         """Apply a raw tint to the surface using color modulation."""
         tinted = surface.copy()
         array = pygame.surfarray.pixels3d(tinted)
-        array[...] = (array * color) // 255  # Element-wise multiplication and normalization
-        del array  # Clean up the array to avoid memory issues
+        array[...] = (array * color) // 255
+        del array
         return tinted
 
     def take_damage(self, damage):
-        if self.health > 0:  # Only take damage if alive
+        if self.health > 0:
             self.health -= damage
-            if not self.is_hit and not self.is_comboing and not self.is_dying:  # Don't interrupt other animations
+            if not self.is_hit and not self.is_comboing and not self.is_dying:
                 self.is_hit = True
                 self.hit_value = 0
             if self.health <= 0 and not self.is_dying:
@@ -207,22 +240,7 @@ class PyGame:
         self.world_x = max(0, min(self.world_x, 10000))
 
     def char_config(self):
-        self.character_walk_left = []
-        self.character_run_left = []
-        self.character_idle_left = []
-        self.character_combo_left = []
-        self.character_hit_left = []
-        self.character_death_left = []
-        for i in range(8):
-            self.character_walk_left.append(pygame.transform.flip(self.character_walk_right[i], True, False))
-            self.character_idle_left.append(pygame.transform.flip(self.character_idle_right[i], True, False))
-            self.character_run_left.append(pygame.transform.flip(self.character_run_right[i], True, False))
-        for i in range(19):
-            self.character_combo_left.append(pygame.transform.flip(self.character_combo_right[i], True, False))
-        for i in range(4):
-            self.character_hit_left.append(pygame.transform.flip(self.character_hit_right[i], True, False))
-        for i in range(10):
-            self.character_death_left.append(pygame.transform.flip(self.character_death_right[i], True, False))
+        pass  # Left-facing sprites are now pre-generated in __init__
 
     def draw_background(self, win):
         # Buildings (farthest layer)
@@ -232,8 +250,7 @@ class PyGame:
             pos_x = i * self.building_width - scroll_amount
             if pos_x < -self.building_width or pos_x > self.WIDTH:
                 continue
-            for b in self.buildings:
-                b_scaled = pygame.transform.scale(b, (self.building_width, b.get_height()))
+            for b_scaled in self.buildings_scaled:
                 win.blit(b_scaled, (pos_x, 60))
 
         # Wall (middle layer)
@@ -242,11 +259,9 @@ class PyGame:
             scroll_amount = self.wall_scroll % self.wall_width
             pos_x = i * self.wall_width - scroll_amount
             if -self.wall_width <= pos_x <= self.WIDTH:
-                wall = pygame.transform.scale(self.wall, (self.wall_width, 180))
-                win.blit(wall, (pos_x, 380))
+                win.blit(self.wall_scaled, (pos_x, 380))
 
         # Footpath (second closest layer)
-        footpath = pygame.transform.scale(self.footpath, (self.footpath_scaled_width, 60))
         footpath_tiles = math.ceil(self.WIDTH / self.footpath_scaled_width) + 2
         scroll_amount = self.footpath_scroll % self.footpath_scaled_width
         start_pos_x = -scroll_amount
@@ -254,7 +269,7 @@ class PyGame:
             pos_x = start_pos_x + i * self.footpath_scaled_width
             if pos_x > self.WIDTH or pos_x < -self.footpath_scaled_width:
                 continue
-            win.blit(footpath, (pos_x, 560))
+            win.blit(self.footpath_scaled, (pos_x, 560))
 
         # Road (closest layer)
         road_tiles = math.ceil(self.WIDTH / self.road_width) + 2
@@ -262,13 +277,17 @@ class PyGame:
             scroll_amount = self.road_scroll % self.road_width
             pos_x = i * self.road_width - scroll_amount
             if -self.road_width <= pos_x <= self.WIDTH:
-                road = pygame.transform.scale(self.road, (self.road_width, 100))
-                win.blit(road, (pos_x, 620))
+                win.blit(self.road_scaled, (pos_x, 620))
 
     def draw_enemies(self, win):
         visible_enemies = 0
         scroll_offset = self.road_scroll
-        for enemy in self.enemies[:]:
+        # Cap the number of enemies to prevent runaway growth
+        if len(self.enemies) > 50:
+            self.enemies = self.enemies[-50:]
+        # Process enemies
+        remaining_enemies = []
+        for enemy in self.enemies:
             previous_x = enemy.world_x
             enemy.update_movement(self.world_x, self)
             enemy.check_attack_hit(self.world_x, self)
@@ -277,13 +296,13 @@ class PyGame:
             elif enemy.world_x > 10000:
                 enemy.world_x -= 10000
             enemy.update_animation()
-            if enemy.ready_to_remove:
-                self.enemies.remove(enemy)
-                continue
-            enemy.draw(win, scroll_offset)
-            enemy_screen_x = enemy.world_x - scroll_offset
-            if -enemy.width <= enemy_screen_x <= self.WIDTH:
-                visible_enemies += 1
+            if not enemy.ready_to_remove:
+                enemy.draw(win, scroll_offset)
+                enemy_screen_x = enemy.world_x - scroll_offset
+                if -enemy.width <= enemy_screen_x <= self.WIDTH:
+                    visible_enemies += 1
+                remaining_enemies.append(enemy)
+        self.enemies = remaining_enemies
         return visible_enemies
 
     def update_animations(self):
@@ -364,7 +383,7 @@ class PyGame:
 
     def main(self):
         run = True
-        win = pygame.display.set_mode((self.WIDTH, self.HEIGHT))  # Fixed window size
+        win = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Stickman")
 
         while run:
@@ -397,13 +416,6 @@ class PyGame:
             else:
                 self.walk_left = False
                 self.walk_right = False
-
-            current_tab_state = keys[pygame.K_TAB]
-            tab_just_pressed = current_tab_state and not self.last_tab_state
-            self.last_tab_state = current_tab_state
-
-            if tab_just_pressed:
-                self.enemy_exists = not self.enemy_exists
 
             self.world_x += move_amount
             self.screen_x = self.WIDTH / 2 - self.player_width / 2
@@ -458,6 +470,9 @@ class PyGame:
                 self.current_speed = self.animation_speed["combo"]
 
             self.update(dt)
+
+            # Force garbage collection to free memory
+            gc.collect()
 
             pygame.display.flip()
 
