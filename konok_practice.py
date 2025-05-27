@@ -2,7 +2,7 @@ import pygame
 import Character as c
 import math
 import gc  # For manual garbage collection
-from enemy import Enemy
+from fake_enemy import Enemy
 
 # Initialize Pygame clock to control the frame rate
 Clock = pygame.time.Clock()
@@ -11,31 +11,55 @@ Clock = pygame.time.Clock()
 YELLOW = (225, 225, 0)
 RED = (255, 0, 0)  # For hitbox
 GREEN = (0, 255, 0)  # For enemy center
-BLACK = (0, 0, 0)  # For text
+BLACK = (0, 0, 0)  # For text and black bars
 WHITE = (220, 221, 220)
 
 class PyGame:
     def __init__(self):
         pygame.init()
-        # Fix window size to 1200x720
-        self.WIDTH, self.HEIGHT = 1200, 720
-        self.x, self.y = 500, 380  # Base coordinates
+        # Base resolution and aspect ratio
+        self.BASE_WIDTH, self.BASE_HEIGHT = 1200, 720
+        self.ASPECT_RATIO = self.BASE_WIDTH / self.BASE_HEIGHT  # 5:3 = 1.6667
+
+        # Get monitor resolution
+        info = pygame.display.Info()
+        self.screen_width = info.current_w
+        self.screen_height = info.current_h
+
+        # Calculate scaled resolution to maintain aspect ratio
+        screen_ratio = self.screen_width / self.screen_height
+        if screen_ratio > self.ASPECT_RATIO:
+            # Screen is wider than game aspect ratio, fit to height
+            self.game_height = self.screen_height
+            self.game_width = int(self.game_height * self.ASPECT_RATIO)
+        else:
+            # Screen is taller than game aspect ratio, fit to width
+            self.game_width = self.screen_width
+            self.game_height = int(self.game_width / self.ASPECT_RATIO)
+
+        # Calculate scaling factor and offsets for centering
+        self.scale_factor = self.game_width / self.BASE_WIDTH
+        self.offset_x = (self.screen_width - self.game_width) // 2
+        self.offset_y = (self.screen_height - self.game_height) // 2
+
+        # Base coordinates (unscaled)
+        self.x, self.y = 500, 380
         self.fixed_y = self.y
         self.height_rect, self.width_rect = 30, 30
         self.speed = 4
         self.health = 100  # Player health
 
         # Wave system
-        self.current_wave = 0  # Start at wave 0 (will increment to 1 immediately)
-        self.MAX_WAVES = 3  # Maximum number of waves
-        self.wave_delay = 180  # 3 seconds at 60 FPS
-        self.wave_timer = 0  # Timer for wave transition
-        self.wave_in_progress = False  # Track if a wave is active
-        self.font = pygame.font.Font(None, 36)  # Font for wave number display
-        self.win_font = pygame.font.Font(None, 124)  # Larger font for win message
-        self.enemies_to_spawn = []  # Queue for staggered spawning
-        self.spawn_timer = 0  # Timer for staggering enemy spawns
-        self.spawn_interval = 5  # Spawn one enemy every 5 frames
+        self.current_wave = 0
+        self.MAX_WAVES = 3
+        self.wave_delay = 180
+        self.wave_timer = 0
+        self.wave_in_progress = False
+        self.font = pygame.font.Font(None, int(36 * self.scale_factor))  # Scale font
+        self.win_font = pygame.font.Font(None, int(124 * self.scale_factor))
+        self.enemies_to_spawn = []
+        self.spawn_timer = 0
+        self.spawn_interval = 5
 
         # Jumping mechanics
         self.is_jumping = False
@@ -46,7 +70,7 @@ class PyGame:
         # Movement tracking
         self.walk_left = False
         self.walk_right = False
-        self.facing_left = False  # Track last facing direction
+        self.facing_left = False
         self.walk_count = 0
 
         # Animation handling
@@ -54,13 +78,14 @@ class PyGame:
         self.animation_speed = {"idle": 0.25, "walk": 0.3, "run": 0.4, "combo": 0.3, "hit": 0.3, "death": 0.3}
         self.current_speed = self.animation_speed["idle"]
         
-        # Character animations (pre-scaled to 400x400)
-        self.sprite_size = (400, 400)
+        # Character animations (scale sprites to match resolution)
+        self.base_sprite_size = (400, 400)
+        self.sprite_size = (int(400 * self.scale_factor), int(400 * self.scale_factor))
         
-        # Sprite cache to avoid reloading images
+        # Sprite cache
         self.sprite_cache = {}
         def load_sprite(path, size, tint=None):
-            key = (path, size, tint)
+            key = (path, tuple(size), tint)
             if key not in self.sprite_cache:
                 try:
                     sprite = pygame.image.load(path)
@@ -71,11 +96,11 @@ class PyGame:
                 except pygame.error as e:
                     print(f"Error loading sprite {path}: {e}")
                     sprite = pygame.Surface(size)
-                    sprite.fill((255, 0, 0))  # Fallback: red square
+                    sprite.fill((255, 0, 0))
                     self.sprite_cache[key] = sprite
             return self.sprite_cache[key]
 
-        # Load sprites using the cache
+        # Load sprites
         tint_color = (255, 0, 0)
         self.character_idle_right = [load_sprite(c.stand_Right[i], self.sprite_size) for i in range(8)]
         self.character_walk_right = [load_sprite(c.walk[i], self.sprite_size) for i in range(8)]
@@ -84,7 +109,6 @@ class PyGame:
         self.character_hit_right = [load_sprite(c.hit[i], self.sprite_size) for i in range(4)]
         self.character_death_right = [load_sprite(c.death[i], self.sprite_size) for i in range(10)]
 
-        # Enemy sprites with tint
         self.enemy_fight_right = [load_sprite(c.combo[i], self.sprite_size, tint_color) for i in range(19)]
         self.enemy_hit_right = [load_sprite(c.hit[i], self.sprite_size, tint_color) for i in range(4)]
         self.enemy_death_right = [load_sprite(c.death[i], self.sprite_size, tint_color) for i in range(10)]
@@ -105,10 +129,10 @@ class PyGame:
         # Animation states
         self.is_hit = False
         self.hit_value = 0
-        self.hit_frame_count = 4  # Total hit animation frames
-        self.is_dying = False  # Death animation state
+        self.hit_frame_count = 4
+        self.is_dying = False
         self.death_value = 0
-        self.death_frame_count = 10  # Total death animation frames
+        self.death_frame_count = 10
 
         # Environment assets
         try:
@@ -128,41 +152,47 @@ class PyGame:
             for b in self.buildings:
                 b.fill((200, 200, 200))
 
-        # Background dimensions
+        # Background dimensions (base resolution)
         self.building_width = self.buildings[0].get_width()
         self.footpath_width = self.footpath.get_width()
         self.road_width = self.road.get_width()
         self.wall_width = self.wall.get_width()
-        
-        # Calculate scaled footpath width
+
+        # Calculate scaled footpath width (base resolution)
         original_height = self.footpath.get_height()
         self.scale_factor_adjusted = 60 / original_height
         self.footpath_scaled_width = int(self.footpath_width * self.scale_factor_adjusted)
 
-        # Pre-scale background assets
-        self.road_scaled = pygame.transform.scale(self.road, (self.road_width, 100))
-        self.footpath_scaled = pygame.transform.scale(self.footpath, (self.footpath_scaled_width, 60))
-        self.wall_scaled = pygame.transform.scale(self.wall, (self.wall_width, 180))
-        self.buildings_scaled = [pygame.transform.scale(b, (self.building_width, b.get_height())) for b in self.buildings]
-        
+        # Pre-scale background assets for the scaled resolution
+        self.road_scaled = pygame.transform.scale(self.road, (int(self.road_width * self.scale_factor), int(100 * self.scale_factor)))
+        self.footpath_scaled = pygame.transform.scale(self.footpath, (int(self.footpath_scaled_width * self.scale_factor), int(60 * self.scale_factor)))
+        self.wall_scaled = pygame.transform.scale(self.wall, (int(self.wall_width * self.scale_factor), int(180 * self.scale_factor)))
+        self.buildings_scaled = [pygame.transform.scale(b, (int(self.building_width * self.scale_factor), int(b.get_height() * self.scale_factor))) for b in self.buildings]
+
+        # Scale background dimensions
+        self.building_width = self.buildings_scaled[0].get_width()
+        self.footpath_scaled_width = self.footpath_scaled.get_width()
+        self.road_width = self.road_scaled.get_width()
+        self.wall_width = self.wall_scaled.get_width()
+
         # Scroll positions
         self.building_scroll = 0
         self.footpath_scroll = 0
         self.road_scroll = 0
         self.wall_scroll = 0
         self.free_mode_offset = 0
-        
+
         # Player's world position
-        self.player_width = 400
+        self.player_width = int(400 * self.scale_factor)
         self.world_x = 500
-        self.screen_x = self.WIDTH / 2 - self.player_width / 2
+        self.screen_x = (self.BASE_WIDTH / 2 - 400 / 2)  # Base coordinates
 
         # Combo state
         self.is_comboing = False
         self.combo_value = 0
-        self.combo_frame_count = 19  # Total combo frames
-        self.combo_damage = 20  # Damage per hit
-        self.combo_range = 100  # Combo attack range
+        self.combo_frame_count = 19
+        self.combo_damage = 20
+        self.combo_range = int(100 * self.scale_factor)
 
         # Enemies
         self.enemies = []
@@ -173,7 +203,6 @@ class PyGame:
         self.target_road_scroll = 0
 
     def tint_surface(self, surface, color):
-        """Apply a raw tint to the surface using color modulation."""
         tinted = surface.copy()
         array = pygame.surfarray.pixels3d(tinted)
         array[...] = (array * color) // 255
@@ -222,7 +251,8 @@ class PyGame:
                     hit_left=self.enemy_hit_left,
                     death_right=self.enemy_death_right,
                     death_left=self.enemy_death_left,
-                    wave_number=self.current_wave
+                    wave_number=self.current_wave,
+                    scale_factor=self.scale_factor
                 )
                 self.enemies.append(enemy)
                 self.spawn_timer = self.spawn_interval
@@ -239,53 +269,48 @@ class PyGame:
 
         self.world_x = max(0, min(self.world_x, 10000))
 
-    def char_config(self):
-        pass  # Left-facing sprites are now pre-generated in __init__
-
-    def draw_background(self, win):
+    def draw_background(self, surface):
         # Buildings (farthest layer)
-        building_tiles = math.ceil(self.WIDTH / self.building_width) + 3
+        building_tiles = math.ceil(self.BASE_WIDTH / (self.building_width / self.scale_factor)) + 3
         for i in range(-1, building_tiles):
-            scroll_amount = self.building_scroll % self.building_width
+            scroll_amount = (self.building_scroll * self.scale_factor) % self.building_width
             pos_x = i * self.building_width - scroll_amount
-            if pos_x < -self.building_width or pos_x > self.WIDTH:
+            if pos_x < -self.building_width or pos_x > self.game_width:
                 continue
             for b_scaled in self.buildings_scaled:
-                win.blit(b_scaled, (pos_x, 60))
+                surface.blit(b_scaled, (pos_x, 60 * self.scale_factor))
 
         # Wall (middle layer)
-        wall_tiles = math.ceil(self.WIDTH / self.wall_width) + 2
+        wall_tiles = math.ceil(self.BASE_WIDTH / (self.wall_width / self.scale_factor)) + 2
         for i in range(-1, wall_tiles):
-            scroll_amount = self.wall_scroll % self.wall_width
+            scroll_amount = (self.wall_scroll * self.scale_factor) % self.wall_width
             pos_x = i * self.wall_width - scroll_amount
-            if -self.wall_width <= pos_x <= self.WIDTH:
-                win.blit(self.wall_scaled, (pos_x, 380))
+            if -self.wall_width <= pos_x <= self.game_width:
+                surface.blit(self.wall_scaled, (pos_x, 380 * self.scale_factor))
 
         # Footpath (second closest layer)
-        footpath_tiles = math.ceil(self.WIDTH / self.footpath_scaled_width) + 2
-        scroll_amount = self.footpath_scroll % self.footpath_scaled_width
+        footpath_tiles = math.ceil(self.BASE_WIDTH / (self.footpath_scaled_width / self.scale_factor)) + 2
+        scroll_amount = (self.footpath_scroll * self.scale_factor) % self.footpath_scaled_width
         start_pos_x = -scroll_amount
         for i in range(footpath_tiles):
             pos_x = start_pos_x + i * self.footpath_scaled_width
-            if pos_x > self.WIDTH or pos_x < -self.footpath_scaled_width:
+            if pos_x > self.game_width or pos_x < -self.footpath_scaled_width:
                 continue
-            win.blit(self.footpath_scaled, (pos_x, 560))
+            surface.blit(self.footpath_scaled, (pos_x, 560 * self.scale_factor))
 
         # Road (closest layer)
-        road_tiles = math.ceil(self.WIDTH / self.road_width) + 2
+        road_tiles = math.ceil(self.BASE_WIDTH / (self.road_width / self.scale_factor)) + 2
         for i in range(-1, road_tiles):
-            scroll_amount = self.road_scroll % self.road_width
+            scroll_amount = (self.road_scroll * self.scale_factor) % self.road_width
             pos_x = i * self.road_width - scroll_amount
-            if -self.road_width <= pos_x <= self.WIDTH:
-                win.blit(self.road_scaled, (pos_x, 620))
+            if -self.road_width <= pos_x <= self.game_width:
+                surface.blit(self.road_scaled, (pos_x, 620 * self.scale_factor))
 
-    def draw_enemies(self, win):
+    def draw_enemies(self, surface):
         visible_enemies = 0
         scroll_offset = self.road_scroll
-        # Cap the number of enemies to prevent runaway growth
         if len(self.enemies) > 50:
             self.enemies = self.enemies[-50:]
-        # Process enemies
         remaining_enemies = []
         for enemy in self.enemies:
             previous_x = enemy.world_x
@@ -297,9 +322,9 @@ class PyGame:
                 enemy.world_x -= 10000
             enemy.update_animation()
             if not enemy.ready_to_remove:
-                enemy.draw(win, scroll_offset)
-                enemy_screen_x = enemy.world_x - scroll_offset
-                if -enemy.width <= enemy_screen_x <= self.WIDTH:
+                enemy.draw(surface, scroll_offset * self.scale_factor, self.scale_factor)
+                enemy_screen_x = (enemy.world_x - scroll_offset) * self.scale_factor
+                if -enemy.width <= enemy_screen_x <= self.game_width:
                     visible_enemies += 1
                 remaining_enemies.append(enemy)
         self.enemies = remaining_enemies
@@ -328,25 +353,22 @@ class PyGame:
             if self.value >= 8:
                 self.value -= 8
 
-    def update_enemies(self):
-        pass
-
-    def check_combo_hits(self, win):
+    def check_combo_hits(self, surface):
         if self.is_comboing:
             if self.facing_left:
-                hitbox_center = self.world_x + self.player_width / 2 - 50
+                hitbox_center = self.world_x + 400 / 2 - 50
             else:
-                hitbox_center = self.world_x + self.player_width / 2 + 50
-            hitbox_left = hitbox_center - self.combo_range / 2
-            hitbox_right = hitbox_center + self.combo_range / 2
-            
+                hitbox_center = self.world_x + 400 / 2 + 50
+            hitbox_left = hitbox_center - 100 / 2
+            hitbox_right = hitbox_center + 100 / 2
+
             for enemy in self.enemies[:]:
                 if enemy.death_animation_finished or enemy.health <= 0:
                     continue
-                enemy_center = enemy.world_x + enemy.width / 2
-                enemy_screen_center = enemy_center - self.road_scroll
-                pygame.draw.circle(win, GREEN, (int(enemy_screen_center), self.y + 200), 5)
-                
+                enemy_center = enemy.world_x + enemy.width / (2 * self.scale_factor)
+                enemy_screen_center = (enemy_center - self.road_scroll) * self.scale_factor
+                pygame.draw.circle(surface, GREEN, (int(enemy_screen_center), int((self.y + 200) * self.scale_factor)), int(5 * self.scale_factor))
+
                 if int(self.combo_value) in [1, 6, 16]:
                     distance = abs(enemy_center - hitbox_center)
                     if hitbox_left <= enemy_center <= hitbox_right:
@@ -374,17 +396,21 @@ class PyGame:
 
         self.update_spawning()
 
-    def draw_wave_info(self, win):
+    def draw_wave_info(self, surface):
         wave_text = self.font.render(f"Wave: {self.current_wave}", True, BLACK)
-        win.blit(wave_text, (10, 10))
+        surface.blit(wave_text, (10 * self.scale_factor, 10 * self.scale_factor))
         if self.current_wave >= self.MAX_WAVES and not self.wave_in_progress and not self.enemies:
             win_text = self.win_font.render("You Win!", True, YELLOW)
-            win.blit(win_text, (self.WIDTH // 2 - win_text.get_width() // 2, self.HEIGHT // 4))
+            surface.blit(win_text, (self.game_width // 2 - win_text.get_width() // 2, self.game_height // 4))
 
     def main(self):
         run = True
-        win = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+        # Set fullscreen mode
+        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         pygame.display.set_caption("Stickman")
+
+        # Create a surface for the game content (scaled resolution)
+        game_surface = pygame.Surface((self.game_width, self.game_height))
 
         while run:
             dt = Clock.tick(60) / 1000.0
@@ -418,8 +444,8 @@ class PyGame:
                 self.walk_right = False
 
             self.world_x += move_amount
-            self.screen_x = self.WIDTH / 2 - self.player_width / 2
-            self.road_scroll = self.world_x - (self.WIDTH / 2 - self.player_width / 2)
+            self.screen_x = self.BASE_WIDTH / 2 - 400 / 2  # Base coordinates
+            self.road_scroll = self.world_x - (self.BASE_WIDTH / 2 - 400 / 2)
             self.building_scroll = self.road_scroll * 0.3
             self.wall_scroll = self.road_scroll * 0.65
             self.footpath_scroll = self.road_scroll * 0.75
@@ -429,15 +455,15 @@ class PyGame:
 
             self.update_wave()
             self.update_animations()
-            self.update_enemies()
 
-            # Clear the screen
-            win.fill(BLACK)
-            # Draw game content
-            self.draw_background(win)
-            visible_enemies = self.draw_enemies(win)
-            self.check_combo_hits(win)
-            self.draw_wave_info(win)
+            # Clear the game surface
+            game_surface.fill(BLACK)
+
+            # Draw game content on the game surface
+            self.draw_background(game_surface)
+            visible_enemies = self.draw_enemies(game_surface)
+            self.check_combo_hits(game_surface)
+            self.draw_wave_info(game_surface)
 
             char_idle_right = self.character_idle_right[int(self.value)]
             char_idle_left = self.character_idle_left[int(self.value)]
@@ -453,17 +479,17 @@ class PyGame:
             char_death_left = self.character_death_left[int(self.death_value)] if self.is_dying else None
 
             if self.is_dying:
-                win.blit(char_death_left if self.facing_left else char_death_right, (self.screen_x, self.y))
+                game_surface.blit(char_death_left if self.facing_left else char_death_right, (self.screen_x * self.scale_factor, self.y * self.scale_factor))
             elif self.is_hit:
-                win.blit(char_hit_left if self.facing_left else char_hit_right, (self.screen_x, self.y))
+                game_surface.blit(char_hit_left if self.facing_left else char_hit_right, (self.screen_x * self.scale_factor, self.y * self.scale_factor))
             elif self.is_comboing:
-                win.blit(char_combo_left if self.facing_left else char_combo_right, (self.screen_x, self.y))
+                game_surface.blit(char_combo_left if self.facing_left else char_combo_right, (self.screen_x * self.scale_factor, self.y * self.scale_factor))
             elif not keys[pygame.K_LEFT] and not keys[pygame.K_RIGHT]:
-                win.blit(char_idle_left if self.facing_left else char_idle_right, (self.screen_x, self.y))
+                game_surface.blit(char_idle_left if self.facing_left else char_idle_right, (self.screen_x * self.scale_factor, self.y * self.scale_factor))
             elif keys[pygame.K_RSHIFT]:
-                win.blit(char_run_right if self.walk_right else char_run_left, (self.screen_x, self.y))
+                game_surface.blit(char_run_right if self.walk_right else char_run_left, (self.screen_x * self.scale_factor, self.y * self.scale_factor))
             else:
-                win.blit(char_walk_left if self.walk_left else char_walk_right, (self.screen_x, self.y))
+                game_surface.blit(char_walk_left if self.walk_left else char_walk_right, (self.screen_x * self.scale_factor, self.y * self.scale_factor))
 
             if keys[pygame.K_SPACE] and visible_enemies > 0 and not self.is_comboing and not self.is_hit and not self.is_dying:
                 self.is_comboing = True
@@ -471,7 +497,13 @@ class PyGame:
 
             self.update(dt)
 
-            # Force garbage collection to free memory
+            # Clear the screen with black (for black bars)
+            screen.fill(BLACK)
+
+            # Blit the game surface onto the screen, centered
+            screen.blit(game_surface, (self.offset_x, self.offset_y))
+
+            # Force garbage collection
             gc.collect()
 
             pygame.display.flip()
@@ -480,5 +512,4 @@ class PyGame:
 
 if __name__ == "__main__":
     pyg = PyGame()
-    pyg.char_config()
     pyg.main()

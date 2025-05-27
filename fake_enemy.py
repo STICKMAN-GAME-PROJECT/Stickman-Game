@@ -2,10 +2,12 @@ import pygame
 import Character as c
 
 class Enemy:
-    def __init__(self, world_x, player_world_x=500, idle_right=None, walk_right=None, run_right=None, fight_right=None, fight_left=None, hit_right=None, hit_left=None, death_right=None, death_left=None, wave_number=1):
+    def __init__(self, world_x, player_world_x=500, idle_right=None, walk_right=None, run_right=None, fight_right=None, fight_left=None, hit_right=None, hit_left=None, death_right=None, death_left=None, wave_number=1, scale_factor=1.0):
         self.world_x = world_x
-        self.width = 400
-        self.height = 400
+        self.scale_factor = scale_factor
+        # Scale width and height based on scale_factor
+        self.width = int(400 * self.scale_factor)
+        self.height = int(400 * self.scale_factor)
         # Base health is 50, increases by 10 per wave (e.g., Wave 2: 60, Wave 3: 70)
         self.health = 50 + (wave_number - 1) * 10
         self.stunned = False
@@ -38,11 +40,11 @@ class Enemy:
         self.attack_cooldown = 60  # 1 second at 60 FPS
         self.attack_timer = 0  # Timer to manage attack frequency
         self.attack_damage = 2  # Match player's combo damage
-        self.attack_range = 100  # Match player's combo range
+        self.attack_range = int(100 * self.scale_factor)  # Scale attack range
         self.combo_delay = 60  # 1 second delay before starting combo (at 60 FPS)
         self.combo_delay_timer = 0  # Timer for delay
 
-        # Use preloaded sprites
+        # Use preloaded sprites (assuming they are pre-scaled by the caller)
         self.fight_right = fight_right
         self.fight_left = fight_left
         self.hit_right = hit_right
@@ -185,9 +187,9 @@ class Enemy:
                 self.stunned = False
 
     def draw(self, win, scroll_offset, offset_y=0):
-        enemy_screen_x = self.world_x - scroll_offset
-        # Adjust y-position with offset_y for letterboxing
-        base_y = 400 + offset_y
+        enemy_screen_x = (self.world_x - scroll_offset) * self.scale_factor
+        # Adjust y-position with offset_y for letterboxing and scale it
+        base_y = (380 + offset_y) * self.scale_factor
         if -self.width <= enemy_screen_x <= win.get_width():  # Only draw if visible
             if self.is_dying:
                 death_sprite = self.death_left[int(self.death_value)] if self.facing_left else self.death_right[int(self.death_value)]
