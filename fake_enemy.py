@@ -8,8 +8,9 @@ class Enemy:
         # Scale width and height based on scale_factor
         self.width = int(400 * self.scale_factor)
         self.height = int(400 * self.scale_factor)
+        self.sprite_size = (self.width, self.height)  # For dynamic scaling
         # Base health is 50, increases by 10 per wave (e.g., Wave 2: 60, Wave 3: 70)
-        self.health = 50 + (wave_number - 1) * 5
+        self.health = 50 + (wave_number - 1) * 10
         self.stunned = False
         self.stun_duration = 300  # 5 seconds at 60 FPS
         self.stun_timer = 0
@@ -44,7 +45,7 @@ class Enemy:
         self.combo_delay = 60  # 1 second delay before starting combo (at 60 FPS)
         self.combo_delay_timer = 0  # Timer for delay
 
-        # Use preloaded sprites (assuming they are pre-scaled by the caller)
+        # Use preloaded base sprites
         self.fight_right = fight_right
         self.fight_left = fight_left
         self.hit_right = hit_right
@@ -192,22 +193,22 @@ class Enemy:
         base_y = (380 + offset_y) * self.scale_factor
         if -self.width <= enemy_screen_x <= win.get_width():  # Only draw if visible
             if self.is_dying:
-                death_sprite = self.death_left[int(self.death_value)] if self.facing_left else self.death_right[int(self.death_value)]
+                death_sprite = pygame.transform.scale(self.death_left[int(self.death_value)] if self.facing_left else self.death_right[int(self.death_value)], self.sprite_size)
                 print(f"Enemy at {self.world_x} drawing death frame: {int(self.death_value)}")
                 win.blit(death_sprite, (enemy_screen_x, base_y))
             elif self.is_hit:
-                hit_sprite = self.hit_left[int(self.hit_value)] if self.facing_left else self.hit_right[int(self.hit_value)]
+                hit_sprite = pygame.transform.scale(self.hit_left[int(self.hit_value)] if self.facing_left else self.hit_right[int(self.hit_value)], self.sprite_size)
                 print(f"Enemy at {self.world_x} drawing hit frame: {int(self.hit_value)}")
                 win.blit(hit_sprite, (enemy_screen_x, base_y))
             elif self.is_fighting:
-                fight_sprite = self.fight_left[int(self.fight_value)] if self.facing_left else self.fight_right[int(self.fight_value)]
+                fight_sprite = pygame.transform.scale(self.fight_left[int(self.fight_value)] if self.facing_left else self.fight_right[int(self.fight_value)], self.sprite_size)
                 print(f"Enemy at {self.world_x} drawing fight frame: {int(self.fight_value)}")
                 win.blit(fight_sprite, (enemy_screen_x, base_y))
             elif not self.death_animation_finished:  # Only draw idle/walk if not dead
                 if self.current_speed == self.animation_speed["walk"]:
-                    sprite = self.walk_left[int(self.value)] if self.facing_left else self.walk_right[int(self.value)]
+                    sprite = pygame.transform.scale(self.walk_left[int(self.value)] if self.facing_left else self.walk_right[int(self.value)], self.sprite_size)
                 else:  # idle
-                    sprite = self.idle_left[int(self.value)] if self.facing_left else self.idle_right[int(self.value)]
+                    sprite = pygame.transform.scale(self.idle_left[int(self.value)] if self.facing_left else self.idle_right[int(self.value)], self.sprite_size)
                 if sprite:  # Ensure sprite exists before blitting
                     print(f"Enemy at {self.world_x} drawing idle/walk frame: {int(self.value)}")
                     win.blit(sprite, (enemy_screen_x, base_y))
