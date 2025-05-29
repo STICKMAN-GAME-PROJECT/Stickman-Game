@@ -9,7 +9,7 @@ class Enemy:
         self.width = int(400 * self.scale_factor)
         self.height = int(400 * self.scale_factor)
         # Base health is 50, increases by 10 per wave (e.g., Wave 2: 60, Wave 3: 70)
-        self.health = 50 + (wave_number - 1) * 10
+        self.health = 50 + (wave_number - 1) * 5
         self.stunned = False
         self.stun_duration = 300  # 5 seconds at 60 FPS
         self.stun_timer = 0
