@@ -397,7 +397,7 @@ class PyGame:
         self.update_spawning()
 
     def draw_wave_info(self, surface):
-        wave_text = self.font.render(f"Wave: {self.current_wave}", True, BLACK)
+        wave_text = self.font.render(f"Wave: {self.current_wave}", True, YELLOW)
         surface.blit(wave_text, (10 * self.scale_factor, 10 * self.scale_factor))
         if self.current_wave >= self.MAX_WAVES and not self.wave_in_progress and not self.enemies:
             win_text = self.win_font.render("You Win!", True, YELLOW)
@@ -417,6 +417,8 @@ class PyGame:
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    run = False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     run = False
 
             keys = pygame.key.get_pressed()
