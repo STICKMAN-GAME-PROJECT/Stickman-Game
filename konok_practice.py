@@ -208,8 +208,8 @@ class PyGame:
         self.current_wave += 1
         self.wave_in_progress = True
         num_enemies = 2 + (self.current_wave - 1)
-        start_pos = random.randint(0, 5000)
-        spacing = random.randint(500, 2500)
+        start_pos = random.randint(1000, 3000)
+        spacing = random.randint(100, 500)
         self.enemies_to_spawn = [(start_pos + i * spacing) for i in range(num_enemies)]
         self.spawn_timer = 0
 
