@@ -21,10 +21,10 @@ class Enemy:
         self.current_speed = 0.23  # Default to walk speed
         self.animation_speed = {"idle": 0.25, "walk": 0.23, "fight": 0.15, "hit": 0.3, "death": 0.3}
         self.initial_x = world_x  # Store initial position for patrol
-        self.patrol_range = 100  # Half of 200-unit patrol range (±100 units)
+        self.patrol_range = 500  # Half of 200-unit patrol range (±100 units)
         self.direction = 1 if not self.facing_left else -1  # Start moving toward initial direction
-        self.minimum_distance = 100  # Stop 100 units away from player
-        self.patrol_at_distance_range = 25  # Patrol ±25 units when at minimum distance
+        self.minimum_distance = 90  # Stop 100 units away from player
+        self.patrol_at_distance_range = 500  # Patrol ±25 units when at minimum distance
         self.at_minimum_distance = False  # Track if enemy is at minimum distance
         self.patrol_center = None  # Center point for patrolling when at minimum distance
         self.is_fighting = False  # For combo attack animation
@@ -59,10 +59,8 @@ class Enemy:
 
     def take_damage(self, damage):
         if self.death_animation_finished:  # Ignore damage if already dead
-            print(f"Enemy at {self.world_x} is already dead, ignoring damage")
             return
         self.health -= damage
-        print(f"Enemy at {self.world_x} taking {damage} damage, health: {self.health}")
         if self.health > 0:  # Only trigger hit animation if alive
             if self.is_fighting:
                 self.is_fighting = False  # Stop combo animation if active
@@ -73,7 +71,6 @@ class Enemy:
             self.is_dying = True
             self.death_value = 0
             self.current_speed = self.animation_speed["death"]
-            print(f"Enemy at {self.world_x} taking fatal damage, starting death animation")
 
     def check_attack_hit(self, player_world_x, player):
         if self.is_fighting and not self.is_dying:
@@ -95,14 +92,12 @@ class Enemy:
     def update_animation(self):
         if self.is_dying and not self.death_animation_finished:
             self.death_value += self.animation_speed["death"]
-            print(f"Enemy at {self.world_x} death animation frame: {self.death_value}")
             if self.death_value >= self.death_duration:
                 self.death_value = self.death_duration - 1  # Cap at last frame (9)
                 self.is_dying = False
                 self.death_animation_finished = True  # Mark animation as finished
                 self.ready_to_remove = True  # Signal for immediate removal
                 self.current_speed = 0  # Stop all animations
-                print(f"Enemy at {self.world_x} death animation locked at frame {self.death_value}, finished: {self.death_animation_finished}")
         elif self.is_hit:
             self.hit_value += self.animation_speed["hit"]
             if self.hit_value >= self.hit_duration:
@@ -130,7 +125,7 @@ class Enemy:
             if self.combo_delay_timer > 0:
                 self.combo_delay_timer -= 1
 
-            if distance_to_player > 200:  # Patrol if player is farther than 200 units
+            if distance_to_player > 400:  # Patrol if player is farther than 200 units
                 self.at_minimum_distance = False  # Reset when far from player
                 self.patrol_center = None
                 self.combo_delay_timer = 0  # Reset delay when moving away
@@ -194,15 +189,12 @@ class Enemy:
         if -self.width <= enemy_screen_x <= win.get_width():  # Only draw if visible
             if self.is_dying:
                 death_sprite = pygame.transform.scale(self.death_left[int(self.death_value)] if self.facing_left else self.death_right[int(self.death_value)], self.sprite_size)
-                print(f"Enemy at {self.world_x} drawing death frame: {int(self.death_value)}")
                 win.blit(death_sprite, (enemy_screen_x, base_y))
             elif self.is_hit:
                 hit_sprite = pygame.transform.scale(self.hit_left[int(self.hit_value)] if self.facing_left else self.hit_right[int(self.hit_value)], self.sprite_size)
-                print(f"Enemy at {self.world_x} drawing hit frame: {int(self.hit_value)}")
                 win.blit(hit_sprite, (enemy_screen_x, base_y))
             elif self.is_fighting:
                 fight_sprite = pygame.transform.scale(self.fight_left[int(self.fight_value)] if self.facing_left else self.fight_right[int(self.fight_value)], self.sprite_size)
-                print(f"Enemy at {self.world_x} drawing fight frame: {int(self.fight_value)}")
                 win.blit(fight_sprite, (enemy_screen_x, base_y))
             elif not self.death_animation_finished:  # Only draw idle/walk if not dead
                 if self.current_speed == self.animation_speed["walk"]:
@@ -210,7 +202,4 @@ class Enemy:
                 else:  # idle
                     sprite = pygame.transform.scale(self.idle_left[int(self.value)] if self.facing_left else self.idle_right[int(self.value)], self.sprite_size)
                 if sprite:  # Ensure sprite exists before blitting
-                    print(f"Enemy at {self.world_x} drawing idle/walk frame: {int(self.value)}")
                     win.blit(sprite, (enemy_screen_x, base_y))
-            else:
-                print(f"Enemy at {self.world_x} is dead, not drawing (finished: {self.death_animation_finished})")

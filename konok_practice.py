@@ -4,6 +4,7 @@ import math
 import random
 import gc  # For manual garbage collection
 from fake_enemy import Enemy
+import cProfile
 
 # Initialize Pygame clock to control the frame rate
 Clock = pygame.time.Clock()
@@ -118,9 +119,9 @@ class PyGame:
 
         # Load and scale background assets
         try:
-            self.road = pygame.image.load("Assets/Terrain/ohk_road_asset.png")
-            self.footpath = pygame.image.load("Assets/Terrain/footpath_asset.png")
-            self.wall = pygame.image.load("Assets/Terrain/ohk_wall_asset.png")
+            self.road = pygame.image.load("Assets/Terrain/compress3/ohk_road_asset.png")
+            self.footpath = pygame.image.load("Assets/Terrain/compress3/footpath_asset.png")
+            self.wall = pygame.image.load("Assets/Terrain/compress3/ohk_wall_asset.png")
             self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
         except pygame.error as e:
             print(f"Error loading background assets: {e}")
@@ -384,6 +385,16 @@ class PyGame:
             win_text = self.win_font.render("You Win!", True, YELLOW)
             surface.blit(win_text, (self.game_width // 2 - win_text.get_width() // 2, self.game_height // 4))
 
+        # Draw remaining enemies number
+        remaining_enemies_text = self.font.render(f"Enemies: {len(self.enemies)}", True, YELLOW)
+        surface.blit(remaining_enemies_text, (self.game_width - remaining_enemies_text.get_width() - 10 * self.scale_factor, 10 * self.scale_factor))
+
+        # Draw player health number in top middle
+        health_text = self.font.render(f"Player Health: {self.health}", True, YELLOW)
+        surface.blit(health_text, (self.game_width // 2 - health_text.get_width() // 2, 10 * self.scale_factor))
+
+
+
     def main(self):
         run = True
         # Set fullscreen mode
@@ -494,9 +505,11 @@ class PyGame:
                 self.gc_counter = 0
 
             pygame.display.flip()
+            print(Clock.get_fps())
 
         pygame.quit()
 
 if __name__ == "__main__":
     pyg = PyGame()
-    pyg.main()
+    cProfile.run('pyg.main()')
+    
