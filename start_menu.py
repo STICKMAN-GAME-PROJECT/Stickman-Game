@@ -54,7 +54,7 @@ class Button:
 def start_game():
     pygame.quit()
     print("Game started!")  # Replace with game loop call
-    os.system("python maypractice.py")
+    os.system("python konok_practice.py")
     sys.exit()
 
 
