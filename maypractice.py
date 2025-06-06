@@ -10,7 +10,7 @@ Clock = pygame.time.Clock()
 YELLOW = (225, 225, 0)
 RED = (255, 0, 0)  # For hitbox
 GREEN = (0, 255, 0)  # For enemy center
-BLACK = (0, 0, 0)  # For text
+BLACK = (0, 0, 0)  # For textq
 WHITE = (220, 221, 220)
 
 class PyGame:
@@ -38,8 +38,8 @@ class PyGame:
         # Jumping mechanics
         self.is_jumping = False
         self.velocity_y = 0
-        self.gravity = 0.5
-        self.jump_strength = -12
+        self.gravity = 0.85
+        self.jump_strength = -16
 
         # Movement tracking
         self.walk_left = False
@@ -89,7 +89,7 @@ class PyGame:
         # Environment assets
         try:
             self.road = pygame.image.load("Assets/Terrain/ohk_road_asset.png")
-            self.footpath = pygame.image.load("Assets/Terrain/footpath.png")
+            self.footpath = pygame.image.load("Assets/Terrain/footpath_asset.png")
             self.wall = pygame.image.load("Assets/Terrain/ohk_wall_asset.png")
             self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
         except pygame.error as e:
