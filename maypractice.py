@@ -10,7 +10,7 @@ Clock = pygame.time.Clock()
 YELLOW = (225, 225, 0)
 RED = (255, 0, 0)  # For hitbox
 GREEN = (0, 255, 0)  # For enemy center
-BLACK = (0, 0, 0)  # For text
+BLACK = (0, 0, 0)  # For textq
 WHITE = (220, 221, 220)
 
 class PyGame:
