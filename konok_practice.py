@@ -122,7 +122,8 @@ class PyGame:
             self.road = pygame.image.load("Assets/Terrain/compress3/ohk_road_asset.png")
             self.footpath = pygame.image.load("Assets/Terrain/compress3/footpath_asset.png")
             self.wall = pygame.image.load("Assets/Terrain/compress3/ohk_wall_asset.png")
-            self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
+            # self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
+            self.buildings = pygame.image.load(f"Assets/Terrain/bg_buildings-compressed.png")
         except pygame.error as e:
             print(f"Error loading background assets: {e}")
             self.road = pygame.Surface((1200, 100))
@@ -136,7 +137,8 @@ class PyGame:
                 b.fill((200, 200, 200))
 
         # Background dimensions (base resolution)
-        self.building_width = self.buildings[0].get_width()
+        # self.building_width = self.buildings[0].get_width()
+        self.building_width = self.buildings.get_width()
         self.footpath_width = self.footpath.get_width()
         self.road_width = self.road.get_width()
         self.wall_width = self.wall.get_width()
@@ -150,10 +152,10 @@ class PyGame:
         self.road_scaled = pygame.transform.scale(self.road, (int(self.road_width * self.scale_factor), int(100 * self.scale_factor)))
         self.footpath_scaled = pygame.transform.scale(self.footpath, (int(self.footpath_scaled_width * self.scale_factor), int(60 * self.scale_factor)))
         self.wall_scaled = pygame.transform.scale(self.wall, (int(self.wall_width * self.scale_factor), int(180 * self.scale_factor)))
-        self.buildings_scaled = [pygame.transform.scale(b, (int(self.building_width * self.scale_factor), int(b.get_height() * self.scale_factor))) for b in self.buildings]
+        self.buildings_scaled = pygame.transform.scale(self.buildings, (int(self.building_width * self.scale_factor), int(self.buildings.get_height() * self.scale_factor)))
 
         # Update scaled dimensions
-        self.building_width = self.buildings_scaled[0].get_width()
+        self.building_width = self.buildings_scaled.get_width()
         self.footpath_scaled_width = self.footpath_scaled.get_width()
         self.road_width = self.road_scaled.get_width()
         self.wall_width = self.wall_scaled.get_width()
@@ -251,14 +253,14 @@ class PyGame:
 
     def draw_background(self, surface):
         # Buildings (farthest layer)
-        building_tiles = math.ceil(self.BASE_WIDTH / (self.building_width / self.scale_factor)) + 3
+        building_tiles = math.ceil(self.BASE_WIDTH / (self.building_width / self.scale_factor)) + 2
         for i in range(-1, building_tiles):
             scroll_amount = (self.building_scroll * self.scale_factor) % self.building_width
             pos_x = i * self.building_width - scroll_amount
             if pos_x < -self.building_width or pos_x > self.game_width:
                 continue
-            for b_scaled in self.buildings_scaled:
-                surface.blit(b_scaled, (pos_x, 60 * self.scale_factor))
+            else:
+                surface.blit(self.buildings_scaled, (pos_x, 60 * self.scale_factor))
 
         # Wall (middle layer)
         wall_tiles = math.ceil(self.BASE_WIDTH / (self.wall_width / self.scale_factor)) + 2
