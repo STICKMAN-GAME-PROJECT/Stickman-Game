@@ -123,7 +123,11 @@ class PyGame:
             self.footpath = pygame.image.load("Assets/Terrain/compress3/footpath_asset.png")
             self.wall = pygame.image.load("Assets/Terrain/compress3/ohk_wall_asset.png")
             # self.buildings = [pygame.image.load(f"Assets/buildings/{i}.png") for i in range(1, 6)]
-            self.buildings = pygame.image.load(f"Assets/Terrain/bg_buildings-compressed.png")
+            self.buildings = pygame.image.load(f"Assets/buildings/bg_buildings-compressed.png")
+
+            #gate - wall --
+            self.gate_wall = pygame.image.load("Assets/Terrain/bpi_gate_temp/gate_wall -1-min2.png")
+        
         except pygame.error as e:
             print(f"Error loading background assets: {e}")
             self.road = pygame.Surface((1200, 100))
@@ -142,6 +146,7 @@ class PyGame:
         self.footpath_width = self.footpath.get_width()
         self.road_width = self.road.get_width()
         self.wall_width = self.wall.get_width()
+        self.gate_wall_width = self.gate_wall.get_width()
 
         # Calculate scaled footpath width (base resolution)
         original_height = self.footpath.get_height()
@@ -154,11 +159,20 @@ class PyGame:
         self.wall_scaled = pygame.transform.scale(self.wall, (int(self.wall_width * self.scale_factor), int(180 * self.scale_factor)))
         self.buildings_scaled = pygame.transform.scale(self.buildings, (int(self.building_width * self.scale_factor), int(self.buildings.get_height() * self.scale_factor)))
 
+        self.gate_wall_scaled = pygame.transform.scale(self.gate_wall, (int(self.gate_wall_width * self.scale_factor), int(self.gate_wall.get_height() * self.scale_factor)))
         # Update scaled dimensions
         self.building_width = self.buildings_scaled.get_width()
         self.footpath_scaled_width = self.footpath_scaled.get_width()
         self.road_width = self.road_scaled.get_width()
         self.wall_width = self.wall_scaled.get_width()
+
+        self.gate_wall_width = self.gate_wall_scaled.get_width()
+
+        # Background scroll positions (scaled resolution)
+        self.building_scroll = 0
+        self.footpath_scroll = 0
+        self.road_scroll = 0
+        self.wall_scroll = 0
 
         # Scroll positions
         self.building_scroll = 0
@@ -263,12 +277,29 @@ class PyGame:
                 surface.blit(self.buildings_scaled, (pos_x, 60 * self.scale_factor))
 
         # Wall (middle layer)
-        wall_tiles = math.ceil(self.BASE_WIDTH / (self.wall_width / self.scale_factor)) + 2
+
+        # Set the gate's world position (fixed, not tied to tile index)
+        gate_world_x = self.wall_width * 0  # e.g., one tile-width from the start
+        gate_y = 112 * self.scale_factor
+
+        # Calculate screen position of gate relative to scroll
+        scroll_amount = self.wall_scroll * self.scale_factor
+        gate_screen_x = gate_world_x - scroll_amount
+
+        # Only draw if gate is on screen
+        if -self.wall_width <= gate_screen_x <= self.game_width:
+            surface.blit(self.gate_wall_scaled, (gate_screen_x, gate_y))
+
+        # Now draw the regular wall tiles, skip the tile that overlaps gate
+        wall_tiles = math.ceil(self.BASE_WIDTH / (self.wall_width / self.scale_factor)) + 3
         for i in range(-1, wall_tiles):
-            scroll_amount = (self.wall_scroll * self.scale_factor) % self.wall_width
             pos_x = i * self.wall_width - scroll_amount
             if -self.wall_width <= pos_x <= self.game_width:
+                # Skip wall tile that would overlap the gate
+                if abs((i * self.wall_width) - gate_world_x) < self.wall_width:
+                    continue
                 surface.blit(self.wall_scaled, (pos_x, 380 * self.scale_factor))
+
 
         # Footpath (second closest layer)
         footpath_tiles = math.ceil(self.BASE_WIDTH / (self.footpath_scaled_width / self.scale_factor)) + 2
