@@ -4,7 +4,7 @@
 ### Our group members:
 - [ ] [Jubayed](https://github.com/Jubayed-04) 
 - [ ] [Obayed Hasan Konok](https://github.com/obayad) 
-- [ ] Jobayed Islam
+- [ ] [Jobayed Islam](https://github.com/jobayedislam)
 - [ ] Sagor Kormokar
 - [ ] [Dipu Chondro Saha](https://github.com/opdipuyt)
 - [ ] Ifad Hasan
