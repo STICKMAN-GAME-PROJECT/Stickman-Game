@@ -126,7 +126,7 @@ class PyGame:
             self.buildings = pygame.image.load(f"Assets/buildings/bg_buildings-compressed.png")
 
             #gate - wall --
-            self.gate_wall = pygame.image.load("Assets/Terrain/bpi_gate_temp/gate_wall -1-min2.png")
+            self.gate_wall = pygame.image.load("Assets/Terrain/bpi_gate_temp/Background.png")
         
         except pygame.error as e:
             print(f"Error loading background assets: {e}")
